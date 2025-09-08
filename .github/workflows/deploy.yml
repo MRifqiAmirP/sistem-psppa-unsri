@@ -16,8 +16,10 @@ jobs:
 
       - name: Git Pull di VPS
         run: |
-            ssh -o StrictHostKeyChecking=no mahesvara@ssh.damonprinsa.cloud "
-            git config --global --add safe.directory /var/www/psppa_feedback &&
-            cd /var/www/psppa_feedback &&
+            ssh -o StrictHostKeyChecking=no mahesvara@ssh.damonprinsa.cloud << 'EOF'
+            sudo chown -R mahesvara:mahesvara /var/www/psppa_feedback
+            git config --global --add safe.directory /var/www/psppa_feedback
+            cd /var/www/psppa_feedback
             git pull origin main
-            "
+            sudo chown -R www-data:www-data /var/www/psppa_feedback
+            EOF
