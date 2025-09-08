@@ -3,7 +3,7 @@
 
         <!-- Logo di kiri -->
         <div class="navbar-logo">
-            <img src="logo.png" alt="Logo">
+            <img src="Logo.png" alt="Logo">
             <div class="navbar-title">Program Studi Pendidikan Profesi Apoteker</div>
         </div>
 
