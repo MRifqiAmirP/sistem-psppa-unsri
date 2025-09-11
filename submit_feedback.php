@@ -23,22 +23,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo "<script>alert('Nama mahasiswa wajib diisi.'); window.location.href='feedback.php';</script>";
                 exit;
             }
-
-            // Simpan feedback mahasiswa
             $stmt = $conn->prepare("INSERT INTO feedback (preceptor_id, nama_mahasiswa, komentar, tipe) VALUES (?, ?, ?, ?)");
             $stmt->execute([$user_id, $nama_mahasiswa, $komentar, 'mahasiswa']);
             $activity = "Memberikan feedback ke mahasiswa: $nama_mahasiswa";
-        } elseif ($tipe === 'prodi' && $_SESSION['role'] === 'preceptor') {
-            // Simpan feedback prodi
-            $stmt = $conn->prepare("INSERT INTO feedback (preceptor_id, komentar, tipe) VALUES (?, ?, ?)");
-            $stmt->execute([$user_id, $komentar, 'prodi']);
-            $activity = "Memberikan feedback ke prodi";
+        } elseif ($tipe === 'prodi' || $tipe === 'wahana') {
+            $nama_wahana = ($tipe === 'wahana') ? htmlspecialchars(trim($_POST['nama_wahana'] ?? '')) : null;
+            $stmt = $conn->prepare("INSERT INTO feedback (mahasiswa_id, preceptor_id, komentar, tipe, nama_wahana) VALUES (?, ?, ?, ?, ?)");
+            $mahasiswa_id = ($_SESSION['role'] === 'mahasiswa') ? $user_id : null;
+            $preceptor_id = ($_SESSION['role'] === 'preceptor') ? $user_id : null;
+            $stmt->execute([$mahasiswa_id, $preceptor_id, $komentar, $tipe, $nama_wahana]);
+            $activity = "Memberikan feedback untuk $tipe" . ($nama_wahana ? " ($nama_wahana)" : "");
         } else {
             echo "<script>alert('Tipe feedback atau role tidak valid.'); window.location.href='feedback.php';</script>";
             exit;
         }
 
-        // Catat aktivitas
         $stmt = $conn->prepare("INSERT INTO activity_log (user_id, activity) VALUES (?, ?)");
         $stmt->execute([$user_id, $activity]);
 

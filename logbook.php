@@ -46,7 +46,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_logbook'])) {
 <body>
     <?php include 'navbar.php'; ?>
     <section class="dashboard-section">
-        <h2 class="main-title">Unggah Logbook</h2>
         <div class="card">
             <h3 class="card-title">Unggah Logbook</h3>
             <form method="POST" action="logbook.php">

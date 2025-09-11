@@ -5,22 +5,8 @@ ob_start();
 // Set header JSON
 header('Content-Type: application/json');
 
-// Koneksi ke database (sesuaikan dengan konfigurasi Anda)
-$host = 'localhost';
-$dbname = 'psppa_feedback'; // Sesuaikan dengan nama database Anda
-$username = 'root'; // Sesuaikan dengan username MySQL Anda
-$password = ''; // Sesuaikan dengan password MySQL Anda (kosong jika default XAMPP)
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    ob_end_clean();
-    echo json_encode(['success' => false, 'message' => 'Koneksi database gagal: ' . $e->getMessage()]);
-    exit;
-}
-
-// Pastikan tidak ada output sebelum header
+// Koneksi ke database
+require_once 'config.php';
 require_once 'auth.php';
 redirectIfNotRole('preceptor');
 
@@ -48,10 +34,11 @@ if (empty($tempat_pka) || empty($alamat) || empty($preseptor) || empty($periode)
 
 // Simpan data ke database
 try {
-    $pdo->beginTransaction();
+    $conn->beginTransaction();
 
     foreach ($students as $student) {
-        $stmt = $pdo->prepare("INSERT INTO penilaian (tempat_pka, alamat, preseptor, periode, student_no, nim, nama, cpmk1, cpmk2, cpmk3, cpmk4, nilai_akhir, nilai_huruf) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $cpmks_json = json_encode($student['cpmks']);
+        $stmt = $conn->prepare("INSERT INTO penilaian (tempat_pka, alamat, preseptor, periode, student_no, nim, nama, cpmks, nilai_akhir, nilai_huruf) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $tempat_pka,
             $alamat,
@@ -60,28 +47,24 @@ try {
             $student['no'],
             $student['nim'],
             $student['nama'],
-            $student['cpmks'][0] ?? null,
-            $student['cpmks'][1] ?? null,
-            $student['cpmks'][2] ?? null,
-            $student['cpmks'][3] ?? null,
+            $cpmks_json,
             $student['nilai_akhir'],
             strtoupper($student['nilai_huruf'])
         ]);
     }
 
     // Tambahkan log aktivitas
-    $stmt = $pdo->prepare("INSERT INTO activity_log (user_id, activity) VALUES (?, ?)");
+    $stmt = $conn->prepare("INSERT INTO activity_log (user_id, activity) VALUES (?, ?)");
     $activity = "Memberikan penilaian periode: $periode";
     $stmt->execute([$_SESSION['user_id'], $activity]);
 
-    $pdo->commit();
+    $conn->commit();
     ob_end_clean();
     echo json_encode(['success' => true, 'message' => 'Penilaian berhasil disimpan']);
 } catch (PDOException $e) {
-    $pdo->rollBack();
+    $conn->rollBack();
     ob_end_clean();
     echo json_encode(['success' => false, 'message' => 'Gagal menyimpan ke database: ' . $e->getMessage()]);
 }
 
 exit;
-?>

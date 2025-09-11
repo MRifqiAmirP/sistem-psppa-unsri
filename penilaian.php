@@ -14,6 +14,7 @@ if (!isset($_SESSION['csrf_token'])) {
 // Tanggal saat ini
 date_default_timezone_set('Asia/Jakarta');
 $today = date('h:i A WIB, l, d F Y');
+$today_date_only = date('d F Y'); // Tanggal untuk tanda tangan (tanpa waktu)
 ?>
 
 <!DOCTYPE html>
@@ -37,26 +38,17 @@ $today = date('h:i A WIB, l, d F Y');
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                 <div class="form-group">
                     <label for="tempat_pka">Tempat PKPA</label>
-                    <select id="tempat_pka" name="tempat_pka" required>
-                        <option value="" disabled selected>Pilih Tempat PKPA</option>
-                        <option value="Rumah Sakit">Rumah Sakit</option>
-                        <option value="Apotek">Apotek</option>
-                        <option value="Puskesmas">Puskesmas</option>
-                        <option value="Pedagang Besar Farmasi">Pedagang Besar Farmasi</option>
-                        <option value="Industri">Industri</option>
-                        <option value="BPOM">BPOM</option>
-                        <option value="Dinas Kesehatan">Dinas Kesehatan</option>
-                    </select>
+                    <input type="text" id="tempat_pka" name="tempat_pka" placeholder="Masukkan Nama Tempat PKPA (misalnya: Apotek Indah Jaya)" required>
                 </div>
                 <div class="form-group">
                     <label for="alamat">Alamat</label>
-                    <input type="text" id="alamat" name="alamat" placeholder="Masukkan alamat" required>
+                    <input type="text" id="alamat" name="alamat" placeholder="Masukkan Nama Kota" maxlength="25" required>
                 </div>
                 <div class="form-group">
                     <label for="preseptor">Preseptor/Pembimbing</label>
                     <input type="text" id="preseptor" name="preseptor" placeholder="Masukkan Pembimbing" required>
                 </div>
-                <div class=" form-group">
+                <div class="form-group">
                     <label for="periode">Periode PKPA</label>
                     <input type="text" id="periode" name="periode" placeholder="10 Januari 2025 - 10 Februari 2025" required>
                 </div>
@@ -223,6 +215,26 @@ $today = date('h:i A WIB, l, d F Y');
             });
         });
 
+        // Fungsi untuk menentukan kategori tempat PKPA untuk judul PDF
+        function getPkaCategory(tempat_pka) {
+            const lowerTempat = tempat_pka.toLowerCase();
+            // Rumah Sakit
+            if (lowerTempat.match(/rumah sakit|rs|rsu|rsud|hospital/i)) return "Rumah Sakit";
+            // Apotek
+            if (lowerTempat.match(/apotek|apotik|pharmacy/i)) return "Apotek";
+            // Puskesmas
+            if (lowerTempat.match(/puskesmas|pusat kesehatan|pusat kesehatan masyarakat/i)) return "Puskesmas";
+            // Pedagang Besar Farmasi
+            if (lowerTempat.match(/pedagang besar|pbf|distributor farmasi|pharma distributor/i)) return "Pedagang Besar Farmasi";
+            // Industri
+            if (lowerTempat.match(/industri|industry|manufaktur/i)) return "Industri";
+            // BPOM
+            if (lowerTempat.match(/bpom|badan pengawas obat|badan pom|pengawas obat/i)) return "BPOM";
+            // Dinas Kesehatan
+            if (lowerTempat.match(/dinas kesehatan|dinkes|departemen kesehatan|kesehatan daerah/i)) return "Dinas Kesehatan";
+            return "Lainnya"; // Fallback jika tidak cocok
+        }
+
         const penilaianForm = document.getElementById("penilaian-form");
         if (penilaianForm) {
             penilaianForm.addEventListener("submit", async (e) => {
@@ -233,6 +245,22 @@ $today = date('h:i A WIB, l, d F Y');
                 const preseptor = document.getElementById("preseptor").value;
                 const periode = document.getElementById("periode").value;
                 const rows = document.querySelectorAll(".student-row");
+
+                // Validasi panjang alamat
+                if (alamat.length > 25) {
+                    alert("Alamat tidak boleh lebih dari 25 karakter.");
+                    return;
+                }
+
+                // Validasi tempat_pka
+                if (!tempat_pka.trim()) {
+                    alert("Tempat PKPA wajib diisi.");
+                    return;
+                }
+                if (tempat_pka.length > 255) {
+                    alert("Tempat PKPA tidak boleh lebih dari 255 karakter.");
+                    return;
+                }
 
                 for (const row of rows) {
                     const nim = row.querySelector(".nim").value;
@@ -257,7 +285,7 @@ $today = date('h:i A WIB, l, d F Y');
                             return;
                         }
                     }
-                    if (!nilai_akhir && nilai_akhir !== 0) { // Cek kosong, termasuk 0
+                    if (!nilai_akhir && nilai_akhir !== 0) {
                         alert(`Nilai Akhir di baris ${row.querySelector(".no").value} wajib diisi.`);
                         return;
                     }
@@ -306,7 +334,7 @@ $today = date('h:i A WIB, l, d F Y');
         async function generatePDF() {
             try {
                 const form = document.getElementById("penilaian-form");
-                const inputs = form.querySelectorAll("input[required], select[required]");
+                const inputs = form.querySelectorAll("input[required]");
                 let valid = true;
                 inputs.forEach(input => {
                     if (!input.value.trim()) {
@@ -317,16 +345,31 @@ $today = date('h:i A WIB, l, d F Y');
                     }
                 });
 
+                const tempat_pka = document.getElementById("tempat_pka").value;
+                const alamat = document.getElementById("alamat").value;
+                if (alamat.length > 25) {
+                    alert("Alamat tidak boleh lebih dari 25 karakter.");
+                    return;
+                }
+                if (!tempat_pka.trim()) {
+                    alert("Tempat PKPA wajib diisi.");
+                    return;
+                }
+                if (tempat_pka.length > 255) {
+                    alert("Tempat PKPA tidak boleh lebih dari 255 karakter.");
+                    return;
+                }
+
                 if (!valid) {
                     alert("Semua field wajib diisi!");
                     return;
                 }
 
-                const tempat_pka = document.getElementById("tempat_pka").value;
-                const alamat = document.getElementById("alamat").value;
                 const preseptor = document.getElementById("preseptor").value;
                 const periode = document.getElementById("periode").value;
-                const tanggal = periode.match(/\d{1,2}\s+[A-Za-z]+\s+\d{4}$/)?.[0] || ".....................";
+                const nama_kota = alamat.trim() || "....................."; // Gunakan alamat sebagai nama kota
+                const tanggal = "<?php echo $today_date_only; ?>"; // Gunakan tanggal hari ini
+                const pka_category = getPkaCategory(tempat_pka); // Kategori untuk judul PDF
 
                 const rows = document.querySelectorAll(".student-row");
                 const data = [];
@@ -365,7 +408,7 @@ $today = date('h:i A WIB, l, d F Y');
                 doc.text("LEMBAR PENILAIAN", 421, 40 + margin, {
                     align: "center"
                 });
-                doc.text(`PRAKTEK KERJA PROFESI APOTEKER BIDANG FARMASI ${tempat_pka.toUpperCase()}`, 421, 60 + margin, {
+                doc.text(`PRAKTEK KERJA PROFESI APOTEKER BIDANG FARMASI ${pka_category.toUpperCase()}`, 421, 60 + margin, {
                     align: "center"
                 });
 
@@ -379,7 +422,7 @@ $today = date('h:i A WIB, l, d F Y');
                 doc.setFont("times", "bold");
                 doc.text("Alamat", margin, 120 + margin);
                 doc.setFont("times", "normal");
-                doc.text(":          " + alamat, margin + 80, 120 + margin);
+                doc.text(":          " + alamat.substring(0, 25), margin + 80, 120 + margin);
 
                 doc.setFont("times", "bold");
                 doc.text("Pembimbing", margin, 150 + margin);
@@ -510,7 +553,7 @@ $today = date('h:i A WIB, l, d F Y');
 
                 doc.setFont("times", "normal");
                 doc.setFontSize(10);
-                doc.text(`......................., ${tanggal}`, margin + 560, currentY + 50);
+                doc.text(`${nama_kota}, ${tanggal}`, margin + 560, currentY + 50); // Gunakan nama kota dan tanggal hari ini
                 doc.text(`(${preseptor})`, margin + 560, currentY + 110);
                 doc.text("Tanggal Cetak: <?php echo $today; ?>", margin, currentY + 90);
 

@@ -68,7 +68,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_wahana'])) {
 <body>
     <?php include 'navbar.php'; ?>
     <section class="dashboard-section">
-        <h2 class="main-title">Saran untuk Prodi dan Wahana</h2>
         <div class="grid-2">
             <!-- Saran untuk Prodi -->
             <div class="card">

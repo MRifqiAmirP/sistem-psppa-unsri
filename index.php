@@ -9,7 +9,7 @@ if (isset($_SESSION['user_id'])) {
     } elseif ($_SESSION['role'] === 'preceptor') {
         header('Location: feedback.php');
     } elseif ($_SESSION['role'] === 'admin') {
-        header('Location: admin.php');
+        header('Location: admin_users.php');
     }
     exit;
 }
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($user['role'] === 'preceptor') {
                 header('Location: feedback.php');
             } elseif ($user['role'] === 'admin') {
-                header('Location: admin.php');
+                header('Location: admin_users.php');
             }
             exit;
         } else {
