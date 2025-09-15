@@ -10,6 +10,8 @@ if (isset($_SESSION['user_id'])) {
         header('Location: feedback.php');
     } elseif ($_SESSION['role'] === 'admin') {
         header('Location: admin_users.php');
+    } elseif ($_SESSION['role'] === 'jadwal_admin') {
+        header('Location: beranda.php');
     }
     exit;
 }
@@ -18,6 +20,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = htmlspecialchars(trim($_POST['username']));
     $password = $_POST['password'];
 
+    // Akun statis untuk sistem jadwal
+    $static_username = 'admin_jadwal';
+    $static_password = 'password123';
+
+    // Cek akun statis terlebih dahulu
+    if ($username === $static_username && $password === $static_password) {
+        $_SESSION['user_id'] = 'static_jadwal'; // ID unik untuk akun statis
+        $_SESSION['role'] = 'jadwal_admin'; // Role khusus untuk sistem jadwal
+        $_SESSION['nama'] = 'Admin Jadwal'; // Nama untuk display
+
+        // Log aktivitas (opsional, sesuaikan jika tabel activity_log ada)
+        try {
+            $stmt = $conn->prepare("INSERT INTO activity_log (user_id, activity) VALUES (?, ?)");
+            $stmt->execute(['static_jadwal', "Login to Jadwal System"]);
+        } catch (PDOException $e) {
+            // Skip logging jika tabel tidak ada atau error
+            error_log("Gagal log aktivitas: " . $e->getMessage());
+        }
+
+        header('Location: beranda.php');
+        exit;
+    }
+
+    // Jika bukan akun statis, cek database untuk sistem feedback
     try {
         $stmt = $conn->prepare("SELECT id, username, password, role, nama FROM users WHERE username = ?");
         $stmt->execute([$username]);
@@ -55,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feedback Perseptor PSPPA</title>
+    <title>Login Sistem Feedback dan Jadwal</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 
