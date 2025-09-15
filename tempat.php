@@ -1,5 +1,5 @@
 <?php
-include 'db.php';
+include 'config.php';
 
 function sanitize($data)
 {
@@ -16,11 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 echo "<script>alert('Nama tempat dan jenis tempat tidak boleh kosong');</script>";
             } else {
                 if ($_POST['action'] == 'tambah') {
-                    $stmt = $pdo->prepare("INSERT INTO tempat (nama_tempat, jenis_tempat) VALUES (?, ?)");
+                    $stmt = $conn->prepare("INSERT INTO tempat (nama_tempat, jenis_tempat) VALUES (?, ?)");
                     $stmt->execute([$nama_tempat, $jenis_tempat]);
                 } else {
                     $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-                    $stmt = $pdo->prepare("UPDATE tempat SET nama_tempat=?, jenis_tempat=? WHERE id=?");
+                    $stmt = $conn->prepare("UPDATE tempat SET nama_tempat=?, jenis_tempat=? WHERE id=?");
                     $stmt->execute([$nama_tempat, $jenis_tempat, $id]);
                 }
                 header('Location: tempat.php');
@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         } elseif ($_POST['action'] == 'hapus') {
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-            $stmt = $pdo->prepare("DELETE FROM tempat WHERE id=?");
+            $stmt = $conn->prepare("DELETE FROM tempat WHERE id=?");
             $stmt->execute([$id]);
             header('Location: tempat.php');
             exit;
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 // Ambil data untuk dropdown jenis tempat
-$stmt = $pdo->query("SELECT DISTINCT jenis_tempat FROM tempat ORDER BY jenis_tempat");
+$stmt = $conn->query("SELECT DISTINCT jenis_tempat FROM tempat ORDER BY jenis_tempat");
 $jenis_tempat_list = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 // Ambil data untuk filter
@@ -51,14 +51,14 @@ if ($selected_jenis) {
 
 // Query untuk daftar tempat
 $sql = "SELECT * FROM tempat $where_clause ORDER BY nama_tempat";
-$stmt = $pdo->prepare($sql);
+$stmt = $conn->prepare($sql);
 $stmt->execute($params);
 $tempat_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Ambil data untuk edit
 $edit = null;
 if (isset($_GET['edit'])) {
-    $stmt = $pdo->prepare("SELECT * FROM tempat WHERE id=?");
+    $stmt = $conn->prepare("SELECT * FROM tempat WHERE id=?");
     $stmt->execute([$_GET['edit']]);
     $edit = $stmt->fetch(PDO::FETCH_ASSOC);
 }
