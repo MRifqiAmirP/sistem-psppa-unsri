@@ -1,5 +1,5 @@
 <?php
-include 'db.php';
+include 'config.php';
 
 function sanitize($data)
 {
@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         } elseif ($_POST['action'] == 'hapus') {
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-            $stmt = $pdo->prepare("DELETE FROM jadwal WHERE id=?");
+            $stmt = $conn->prepare("DELETE FROM jadwal WHERE id=?");
             $stmt->execute([$id]);
             header('Location: jadwal.php');
             exit;
@@ -66,11 +66,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 // Ambil data untuk filter
-$stmt = $pdo->query("SELECT DISTINCT angkatan FROM mahasiswa ORDER BY angkatan DESC");
+$stmt = $conn->query("SELECT DISTINCT angkatan FROM mahasiswa ORDER BY angkatan DESC");
 $angkatan_list = $stmt->fetchAll(PDO::FETCH_COLUMN);
-$stmt = $pdo->query("SELECT DISTINCT jenis_tempat FROM tempat ORDER BY jenis_tempat");
+$stmt = $conn->query("SELECT DISTINCT jenis_tempat FROM tempat ORDER BY jenis_tempat");
 $jenis_tempat_list = $stmt->fetchAll(PDO::FETCH_COLUMN);
-$stmt = $pdo->query("SELECT id, nama_tempat FROM tempat ORDER BY nama_tempat");
+$stmt = $conn->query("SELECT id, nama_tempat FROM tempat ORDER BY nama_tempat");
 $tempat_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $stmt = $pdo->query("SELECT d.id, d.nama, d.tipe, t.nama_tempat 
                      FROM dosen_pembimbing d 
@@ -79,7 +79,7 @@ $stmt = $pdo->query("SELECT d.id, d.nama, d.tipe, t.nama_tempat
 $dosen_pembimbing_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Ambil rentang tanggal unik dari tabel jadwal
-$stmt = $pdo->query("SELECT DISTINCT tanggal_mulai, tanggal_selesai FROM jadwal ORDER BY tanggal_mulai");
+$stmt = $conn->query("SELECT DISTINCT tanggal_mulai, tanggal_selesai FROM jadwal ORDER BY tanggal_mulai");
 $date_ranges = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Filter
@@ -146,7 +146,7 @@ if (!empty($where_clauses)) {
     $sql .= " WHERE " . implode(" AND ", $where_clauses);
 }
 $sql .= " ORDER BY j.tanggal_mulai, m.nama";
-$stmt = $pdo->prepare($sql);
+$stmt = $conn->prepare($sql);
 $stmt->execute($params);
 $jadwal_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -154,7 +154,7 @@ $jadwal_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $edit = null;
 $preceptor_list_edit = [];
 if (isset($_GET['edit'])) {
-    $stmt = $pdo->prepare("SELECT * FROM jadwal WHERE id=?");
+    $stmt = $conn->prepare("SELECT * FROM jadwal WHERE id=?");
     $stmt->execute([$_GET['edit']]);
     $edit = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($edit) {
@@ -351,7 +351,7 @@ if (isset($_GET['edit'])) {
                 <label for="id_mahasiswa">Mahasiswa:</label>
                 <select name="id_mahasiswa" id="id_mahasiswa" required>
                     <?php
-                    $stmt = $pdo->query("SELECT id, nama FROM mahasiswa");
+                    $stmt = $conn->query("SELECT id, nama FROM mahasiswa");
                     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         $selected = ($edit['id_mahasiswa'] == $row['id']) ? 'selected' : '';
                         echo "<option value='{$row['id']}' $selected>" . htmlspecialchars($row['nama']) . "</option>";
@@ -363,7 +363,7 @@ if (isset($_GET['edit'])) {
                 <label for="id_tempat">Tempat:</label>
                 <select name="id_tempat" id="id_tempat" required>
                     <?php
-                    $stmt = $pdo->query("SELECT id, nama_tempat FROM tempat");
+                    $stmt = $conn->query("SELECT id, nama_tempat FROM tempat");
                     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         $selected = ($edit['id_tempat'] == $row['id']) ? 'selected' : '';
                         echo "<option value='{$row['id']}' $selected>" . htmlspecialchars($row['nama_tempat']) . "</option>";

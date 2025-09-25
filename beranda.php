@@ -1,4 +1,4 @@
-<?php include 'db.php'; ?>
+<?php include 'config.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -23,11 +23,11 @@
     }
 
     // Statistik
-    $total_mahasiswa = $pdo->query("SELECT COUNT(*) FROM mahasiswa")->fetchColumn();
-    $total_tempat = $pdo->query("SELECT COUNT(*) FROM tempat")->fetchColumn();
+    $total_mahasiswa = $conn->query("SELECT COUNT(*) FROM mahasiswa")->fetchColumn();
+    $total_tempat = $conn->query("SELECT COUNT(*) FROM tempat")->fetchColumn();
     $start_week = date('Y-m-d', strtotime('monday this week'));
     $end_week = date('Y-m-d', strtotime('sunday this week'));
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM jadwal WHERE tanggal_mulai <= ? AND tanggal_selesai >= ?");
+    $stmt = $conn->prepare("SELECT COUNT(*) FROM jadwal WHERE tanggal_mulai <= ? AND tanggal_selesai >= ?");
     $stmt->execute([$end_week, $start_week]);
     $active_week = $stmt->fetchColumn();
     ?>

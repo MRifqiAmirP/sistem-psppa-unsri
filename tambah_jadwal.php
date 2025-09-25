@@ -33,14 +33,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 echo json_encode(['error' => 'ID mahasiswa atau tempat tidak valid']);
                 exit;
             }
-            $stmt = $pdo->prepare("SELECT id FROM mahasiswa WHERE id = ?");
+            $stmt = $conn->prepare("SELECT id FROM mahasiswa WHERE id = ?");
             $stmt->execute([$id_mahasiswa]);
             if (!$stmt->fetch()) {
                 http_response_code(400);
                 echo json_encode(['error' => 'ID mahasiswa tidak ditemukan']);
                 exit;
             }
-            $stmt = $pdo->prepare("SELECT id FROM tempat WHERE id = ?");
+            $stmt = $conn->prepare("SELECT id FROM tempat WHERE id = ?");
             $stmt->execute([$id_tempat]);
             if (!$stmt->fetch()) {
                 http_response_code(400);
@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                     echo json_encode(['error' => 'Tanggal mulai harus sebelum atau sama dengan tanggal selesai']);
                     exit;
                 }
-                $stmt = $pdo->prepare("SELECT id, tanggal_mulai, tanggal_selesai FROM jadwal WHERE id_mahasiswa = ? AND tanggal_selesai >= ? AND tanggal_mulai <= ?");
+                $stmt = $conn->prepare("SELECT id, tanggal_mulai, tanggal_selesai FROM jadwal WHERE id_mahasiswa = ? AND tanggal_selesai >= ? AND tanggal_mulai <= ?");
                 $stmt->execute([$id_mahasiswa, $start, $end]);
                 $conflicts = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 if (!empty($conflicts)) {
@@ -117,14 +117,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 echo json_encode(['error' => 'Input untuk penghapusan tidak valid']);
                 exit;
             }
-            $stmt = $pdo->prepare("SELECT id FROM mahasiswa WHERE id = ?");
+            $stmt = $conn->prepare("SELECT id FROM mahasiswa WHERE id = ?");
             $stmt->execute([$id_mahasiswa]);
             if (!$stmt->fetch()) {
                 http_response_code(400);
                 echo json_encode(['error' => 'ID mahasiswa tidak ditemukan']);
                 exit;
             }
-            $stmt = $pdo->prepare("DELETE FROM jadwal WHERE id_mahasiswa = ? AND tanggal_mulai <= ? AND tanggal_selesai >= ?");
+            $stmt = $conn->prepare("DELETE FROM jadwal WHERE id_mahasiswa = ? AND tanggal_mulai <= ? AND tanggal_selesai >= ?");
             $stmt->execute([$id_mahasiswa, $tanggal, $tanggal]);
             echo json_encode(['success' => true]);
             exit;
@@ -155,7 +155,7 @@ $stmt = $pdo->query("SELECT DISTINCT jenis_tempat FROM tempat ORDER BY jenis_tem
 $jenis_tempat_list = $stmt->fetchAll(PDO::FETCH_COLUMN);
 $tempat_by_jenis = [];
 foreach ($jenis_tempat_list as $jenis) {
-    $stmt = $pdo->prepare("SELECT id, nama_tempat FROM tempat WHERE jenis_tempat = ? ORDER BY nama_tempat");
+    $stmt = $conn->prepare("SELECT id, nama_tempat FROM tempat WHERE jenis_tempat = ? ORDER BY nama_tempat");
     $stmt->execute([$jenis]);
     $tempat_by_jenis[$jenis] = $stmt->fetchAll(PDO::FETCH_ASSOC);
     error_log("Tempat Query Result for jenis $jenis: " . print_r($tempat_by_jenis[$jenis], true));
@@ -187,7 +187,7 @@ $jadwal_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $total_days = [];
 foreach ($mahasiswa_list as $mhs) {
-    $stmt = $pdo->prepare("SELECT SUM(DATEDIFF(tanggal_selesai, tanggal_mulai) + 1) as total_days FROM jadwal WHERE id_mahasiswa = ?");
+    $stmt = $conn->prepare("SELECT SUM(DATEDIFF(tanggal_selesai, tanggal_mulai) + 1) as total_days FROM jadwal WHERE id_mahasiswa = ?");
     $stmt->execute([$mhs['id']]);
     $total_days[$mhs['id']] = $stmt->fetchColumn() ?? 0;
 }
