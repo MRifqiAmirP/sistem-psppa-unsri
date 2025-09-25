@@ -72,7 +72,7 @@ $stmt = $conn->query("SELECT DISTINCT jenis_tempat FROM tempat ORDER BY jenis_te
 $jenis_tempat_list = $stmt->fetchAll(PDO::FETCH_COLUMN);
 $stmt = $conn->query("SELECT id, nama_tempat FROM tempat ORDER BY nama_tempat");
 $tempat_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
-$stmt = $pdo->query("SELECT d.id, d.nama, d.tipe, t.nama_tempat 
+$stmt = $conn->query("SELECT d.id, d.nama, d.tipe, t.nama_tempat 
                      FROM dosen_pembimbing d 
                      LEFT JOIN tempat t ON d.id_tempat = t.id 
                      ORDER BY d.nama");
