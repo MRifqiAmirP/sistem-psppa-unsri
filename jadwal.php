@@ -9,7 +9,7 @@ function sanitize($data)
 // Handle get_preceptors for AJAX
 if (isset($_GET['get_preceptors']) && filter_var($_GET['id_tempat'], FILTER_VALIDATE_INT)) {
     header('Content-Type: application/json');
-    $stmt = $pdo->prepare("SELECT id, nama FROM dosen_pembimbing WHERE tipe = 'preceptor' AND id_tempat = ? ORDER BY nama");
+    $stmt = $conn->prepare("SELECT id, nama FROM dosen_pembimbing WHERE tipe = 'preceptor' AND id_tempat = ? ORDER BY nama");
     $stmt->execute([$_GET['id_tempat']]);
     $preceptor_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
     echo json_encode($preceptor_list);
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             } else {
                 if ($_POST['action'] == 'edit') {
                     $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-                    $stmt = $pdo->prepare("SELECT * FROM jadwal WHERE id_mahasiswa = ? AND id != ? AND (
+                    $stmt = $conn->prepare("SELECT * FROM jadwal WHERE id_mahasiswa = ? AND id != ? AND (
                         (tanggal_mulai <= ? AND tanggal_selesai >= ?) OR
                         (tanggal_mulai <= ? AND tanggal_selesai >= ?) OR
                         (tanggal_mulai >= ? AND tanggal_selesai <= ?)
@@ -43,13 +43,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     if ($stmt->fetch()) {
                         echo "<script>alert('Konflik jadwal terdeteksi: Jadwal tumpang tindih untuk mahasiswa ini');</script>";
                     } else {
-                        $stmt = $pdo->prepare("UPDATE jadwal SET id_mahasiswa=?, id_tempat=?, id_dosen_pembimbing=?, id_preceptor1=?, id_preceptor2=?, tanggal_mulai=?, tanggal_selesai=? WHERE id=?");
+                        $stmt = $conn->prepare("UPDATE jadwal SET id_mahasiswa=?, id_tempat=?, id_dosen_pembimbing=?, id_preceptor1=?, id_preceptor2=?, tanggal_mulai=?, tanggal_selesai=? WHERE id=?");
                         $stmt->execute([$id_mahasiswa, $id_tempat, $id_dosen_pembimbing, $id_preceptor1, $id_preceptor2, $tanggal_mulai, $tanggal_selesai, $id]);
                         echo "<script>alert('Jadwal berhasil diperbarui'); window.location.href='jadwal.php';</script>";
                         exit;
                     }
                 } else {
-                    $stmt = $pdo->prepare("INSERT INTO jadwal (id_mahasiswa, id_tempat, id_dosen_pembimbing, id_preceptor1, id_preceptor2, tanggal_mulai, tanggal_selesai) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $stmt = $conn->prepare("INSERT INTO jadwal (id_mahasiswa, id_tempat, id_dosen_pembimbing, id_preceptor1, id_preceptor2, tanggal_mulai, tanggal_selesai) VALUES (?, ?, ?, ?, ?, ?, ?)");
                     $stmt->execute([$id_mahasiswa, $id_tempat, $id_dosen_pembimbing, $id_preceptor1, $id_preceptor2, $tanggal_mulai, $tanggal_selesai]);
                 }
                 header('Location: jadwal.php');
@@ -158,7 +158,7 @@ if (isset($_GET['edit'])) {
     $stmt->execute([$_GET['edit']]);
     $edit = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($edit) {
-        $stmt = $pdo->prepare("SELECT id, nama FROM dosen_pembimbing WHERE tipe = 'preceptor' AND id_tempat = ? ORDER BY nama");
+        $stmt = $conn->prepare("SELECT id, nama FROM dosen_pembimbing WHERE tipe = 'preceptor' AND id_tempat = ? ORDER BY nama");
         $stmt->execute([$edit['id_tempat']]);
         $preceptor_list_edit = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
