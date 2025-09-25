@@ -69,20 +69,14 @@ if (isset($_GET['edit'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Tempat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Tempat</title>
     <link rel="stylesheet" href="style1.css">
     <script src="script1.js"></script>
 </head>
 
 <body>
-    <header>
-        <a href="beranda.php">Dashboard</a>
-        <a href="mahasiswa1.php">Mahasiswa</a>
-        <a href="tempat.php">Tempat</a>
-        <a href="jadwal.php">Jadwal</a>
-        <a href="tambah_jadwal.php">Tambah Jadwal</a>
-        <a href="logout.php" class="logout-btn">Logout</a>
-    </header>
+    <?php include 'header.php'; ?>
     <h1>Manajemen Tempat</h1>
 
     <h2><?php echo $edit ? 'Edit Tempat' : 'Tambah Tempat'; ?></h2>
@@ -91,20 +85,22 @@ if (isset($_GET['edit'])) {
         <?php if ($edit): ?>
             <input type="hidden" name="id" value="<?php echo htmlspecialchars($edit['id']); ?>">
         <?php endif; ?>
-        <div class="form-group">
-            <label for="nama_tempat">Nama Tempat:</label>
-            <input type="text" name="nama_tempat" id="nama_tempat" value="<?php echo $edit ? htmlspecialchars($edit['nama_tempat']) : ''; ?>" required>
+        <div class="form-group-container">
+            <div class="form-group">
+                <label for="nama_tempat">Nama Tempat:</label>
+                <input type="text" name="nama_tempat" id="nama_tempat" value="<?php echo $edit ? htmlspecialchars($edit['nama_tempat']) : ''; ?>" required aria-label="Nama Tempat">
+            </div>
+            <div class="form-group">
+                <label for="jenis_tempat">Jenis Tempat:</label>
+                <select name="jenis_tempat" id="jenis_tempat" required aria-label="Jenis Tempat">
+                    <option value="">Pilih Jenis Tempat</option>
+                    <?php foreach ($jenis_tempat_list as $jenis): ?>
+                        <option value="<?php echo htmlspecialchars($jenis); ?>" <?php echo ($edit && $edit['jenis_tempat'] == $jenis) ? 'selected' : ''; ?>><?php echo htmlspecialchars($jenis); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </div>
-        <div class="form-group">
-            <label for="jenis_tempat">Jenis Tempat:</label>
-            <select name="jenis_tempat" id="jenis_tempat" required>
-                <option value="">Pilih Jenis Tempat</option>
-                <?php foreach ($jenis_tempat_list as $jenis): ?>
-                    <option value="<?php echo htmlspecialchars($jenis); ?>" <?php echo ($edit && $edit['jenis_tempat'] == $jenis) ? 'selected' : ''; ?>><?php echo htmlspecialchars($jenis); ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <button type="submit">Simpan</button>
+        <button type="submit"><?php echo $edit ? 'Update' : 'Simpan'; ?></button>
     </form>
 
     <h2>Filter Tempat</h2>
@@ -127,28 +123,33 @@ if (isset($_GET['edit'])) {
     <?php if (empty($tempat_list)): ?>
         <p>Tidak ada tempat yang sesuai dengan filter.</p>
     <?php else: ?>
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Nama Tempat</th>
-                <th>Jenis</th>
-                <th>Aksi</th>
-            </tr>
-            <?php foreach ($tempat_list as $row): ?>
+        <table class="mahasiswa-table">
+            <thead>
                 <tr>
-                    <td><?php echo htmlspecialchars($row['id']); ?></td>
-                    <td><?php echo htmlspecialchars($row['nama_tempat']); ?></td>
-                    <td><?php echo htmlspecialchars($row['jenis_tempat']); ?></td>
-                    <td>
-                        <a href="tempat.php?edit=<?php echo htmlspecialchars($row['id']); ?>" class="action-btn edit-btn">Edit</a> |
-                        <form method="POST" style="display:inline;" class="delete-form">
-                            <input type="hidden" name="action" value="hapus">
-                            <input type="hidden" name="id" value="<?php echo htmlspecialchars($row['id']); ?>">
-                            <button type="submit" class="action-btn delete-btn" onclick="return confirmDelete();">Hapus</button>
-                        </form>
-                    </td>
+                    <th>No</th>
+                    <th>Nama Tempat</th>
+                    <th>Jenis</th>
+                    <th>Aksi</th>
                 </tr>
-            <?php endforeach; ?>
+            </thead>
+            <tbody>
+                <?php $no = 1; ?>
+                <?php foreach ($tempat_list as $row): ?>
+                    <tr>
+                        <td><?php echo $no++; ?></td>
+                        <td><?php echo htmlspecialchars($row['nama_tempat']); ?></td>
+                        <td><?php echo htmlspecialchars($row['jenis_tempat']); ?></td>
+                        <td>
+                            <a href="tempat.php?edit=<?php echo htmlspecialchars($row['id']); ?>" class="action-btn edit-btn">Edit</a>
+                            <form method="POST" class="delete-form">
+                                <input type="hidden" name="action" value="hapus">
+                                <input type="hidden" name="id" value="<?php echo htmlspecialchars($row['id']); ?>">
+                                <button type="submit" class="action-btn delete-btn" onclick="return confirmDelete();">Hapus</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
         </table>
     <?php endif; ?>
 </body>

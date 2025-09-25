@@ -87,19 +87,44 @@ let hoverTimeout = null;
 const HOVER_DELAY = 2000;
 
 function updateHiddenFields() {
-  document.getElementById("hidden_id_tempat").value = selectedTempatId || "";
-  document.getElementById("hidden_start_date").value = startDate || "";
-  document.getElementById("hidden_mahasiswa_id").value =
-    selectedMahasiswaId || "";
-  document.getElementById("hidden_id_dosen_pembimbing").value =
-    document.getElementById("dosen_pembimbing")?.value || "";
+  const hiddenTempat = document.getElementById("hidden_id_tempat");
+  if (hiddenTempat) hiddenTempat.value = selectedTempatId || "";
+  const hiddenStartDate = document.getElementById("hidden_start_date");
+  if (hiddenStartDate) hiddenStartDate.value = startDate || "";
+  const hiddenMahasiswaId = document.getElementById("hidden_mahasiswa_id");
+  if (hiddenMahasiswaId) hiddenMahasiswaId.value = selectedMahasiswaId || "";
+  const hiddenDosen = document.getElementById("hidden_id_dosen_pembimbing");
+  if (hiddenDosen)
+    hiddenDosen.value =
+      document.getElementById("dosen_pembimbing")?.value || "";
+  const hiddenPreceptor1 = document.getElementById("hidden_id_preceptor1");
+  if (hiddenPreceptor1)
+    hiddenPreceptor1.value = document.getElementById("preceptor1")?.value || "";
+  const hiddenPreceptor2 = document.getElementById("hidden_id_preceptor2");
+  if (hiddenPreceptor2)
+    hiddenPreceptor2.value = document.getElementById("preceptor2")?.value || "";
 }
 
 function setTempatColor(select) {
+  console.log("setTempatColor called:", {
+    value: select.value,
+    nama: select.selectedOptions[0]?.dataset.nama,
+    jenis: select.dataset.jenis,
+  });
+
+  // Hanya reset dropdown lain jika diperlukan
   document.querySelectorAll(".dropdown-item select").forEach((sel) => {
-    if (sel !== select && sel.id !== "dosen_pembimbing") sel.value = "";
-    const jenis = sel.dataset.jenis;
-    sel.className = jenis ? `dropdown-${jenis}` : "default-dropdown";
+    if (
+      sel !== select &&
+      sel.id !== "dosen_pembimbing" &&
+      sel.id !== "preceptor1" &&
+      sel.id !== "preceptor2"
+    ) {
+      if (sel.value && sel.value !== select.value) return; // Jangan reset jika sudah ada nilai
+      sel.value = "";
+      const jenis = sel.dataset.jenis;
+      sel.className = jenis ? `dropdown-${jenis}` : "default-dropdown";
+    }
   });
 
   selectedTempatId = select.value ? parseInt(select.value) : null;
@@ -120,14 +145,25 @@ function setTempatColor(select) {
     localStorage.setItem("selectedJenisTempat", jenis);
     const url = new URL(window.location);
     url.searchParams.set("id_tempat", selectedTempatId);
-    window.history.pushState({}, "", url);
+    window.history.replaceState({}, "", url);
+    // Hapus submit otomatis untuk mencegah reload
+    // document.getElementById("filterForm").submit();
+    // Muat ulang preceptor berdasarkan id_tempat
+    fetchPreceptors(selectedTempatId);
   } else {
     localStorage.removeItem("selectedTempatId");
     localStorage.removeItem("selectedNamaTempat");
     localStorage.removeItem("selectedJenisTempat");
     const url = new URL(window.location);
     url.searchParams.delete("id_tempat");
-    window.history.pushState({}, "", url);
+    url.searchParams.delete("id_preceptor1");
+    url.searchParams.delete("id_preceptor2");
+    window.history.replaceState({}, "", url);
+    document.getElementById("preceptor1").innerHTML =
+      '<option value="">Pilih Preceptor 1 (Opsional)</option><option value="" disabled>Pilih tempat terlebih dahulu</option>';
+    document.getElementById("preceptor2").innerHTML =
+      '<option value="">Pilih Preceptor 2 (Opsional)</option><option value="" disabled>Pilih tempat terlebih dahulu</option>';
+    updateHiddenFields();
   }
   updateHiddenFields();
 
@@ -140,11 +176,55 @@ function setTempatColor(select) {
     const url = new URL(window.location);
     url.searchParams.delete("start_date");
     url.searchParams.delete("mahasiswa_id");
-    window.history.pushState({}, "", url);
+    window.history.replaceState({}, "", url);
     updateHiddenFields();
   } else if (startDate && selectedMahasiswaId) {
     updateRangePreview(startDate, startDate);
   }
+}
+
+function fetchPreceptors(idTempat) {
+  if (!idTempat) return;
+  fetch(`tambah_jadwal.php?id_tempat=${idTempat}&get_preceptors=1`, {
+    method: "GET",
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log("Preceptors fetched:", data);
+      const preceptor1Select = document.getElementById("preceptor1");
+      const preceptor2Select = document.getElementById("preceptor2");
+      preceptor1Select.innerHTML =
+        '<option value="">Pilih Preceptor 1 (Opsional)</option>';
+      preceptor2Select.innerHTML =
+        '<option value="">Pilih Preceptor 2 (Opsional)</option>';
+      if (data.length === 0) {
+        preceptor1Select.innerHTML +=
+          '<option value="" disabled>Tidak ada preceptor untuk tempat ini</option>';
+        preceptor2Select.innerHTML +=
+          '<option value="" disabled>Tidak ada preceptor untuk tempat ini</option>';
+      } else {
+        data.forEach((preceptor) => {
+          const option1 = document.createElement("option");
+          option1.value = preceptor.id;
+          option1.textContent = preceptor.nama;
+          preceptor1Select.appendChild(option1);
+          const option2 = document.createElement("option");
+          option2.value = preceptor.id;
+          option2.textContent = preceptor.nama;
+          preceptor2Select.appendChild(option2);
+        });
+      }
+      // Pulihkan pilihan preceptor jika ada
+      const savedPreceptor1Id = localStorage.getItem("selectedPreceptor1Id");
+      const savedPreceptor2Id = localStorage.getItem("selectedPreceptor2Id");
+      if (savedPreceptor1Id) preceptor1Select.value = savedPreceptor1Id;
+      if (savedPreceptor2Id) preceptor2Select.value = savedPreceptor2Id;
+      updateHiddenFields();
+    })
+    .catch((error) => {
+      console.error("Error fetching preceptors:", error);
+      alert("Gagal memuat preceptor. Silakan coba lagi.");
+    });
 }
 
 function colorScheduleTable() {
@@ -167,20 +247,73 @@ function colorScheduleTable() {
   }
 }
 
+function restoreTempatSelection() {
+  console.log("restoreTempatSelection called");
+  const hiddenTempat = document.getElementById("hidden_id_tempat");
+  const storedTempatId = localStorage.getItem("selectedTempatId");
+  const urlParams = new URLSearchParams(window.location.search);
+  const savedTempatId = urlParams.get("id_tempat") || storedTempatId;
+
+  if (savedTempatId) {
+    selectedTempatId = parseInt(savedTempatId);
+    const select = document.querySelector(
+      `select option[value="${savedTempatId}"]`
+    )?.parentNode;
+    if (select) {
+      select.value = savedTempatId;
+      selectedNamaTempat =
+        select.selectedOptions[0]?.dataset.nama ||
+        localStorage.getItem("selectedNamaTempat") ||
+        "";
+      const jenis =
+        select.dataset.jenis ||
+        localStorage.getItem("selectedJenisTempat") ||
+        "";
+      const index =
+        Array.from(select.options)
+          .filter((opt) => opt.value !== "")
+          .indexOf(select.selectedOptions[0]) %
+          placeColors[jenis]?.variations.length || 0;
+      selectedColor = placeColors[jenis]?.variations[index] || "#ccc";
+      localStorage.setItem("selectedTempatId", selectedTempatId);
+      localStorage.setItem("selectedNamaTempat", selectedNamaTempat);
+      localStorage.setItem("selectedJenisTempat", jenis);
+      const url = new URL(window.location);
+      url.searchParams.set("id_tempat", selectedTempatId);
+      window.history.replaceState({}, "", url);
+      if (hiddenTempat) hiddenTempat.value = selectedTempatId;
+      fetchPreceptors(selectedTempatId); // Muat preceptor saat restore
+      console.log("Tempat restored:", {
+        id: selectedTempatId,
+        nama: selectedNamaTempat,
+        jenis,
+      });
+    } else {
+      console.warn("No select found for savedTempatId:", savedTempatId);
+    }
+  }
+  updateHiddenFields();
+}
+
 function handleCellSelection() {
   const cells = document.querySelectorAll(".jadwalTable td[data-date]");
   cells.forEach((cell) => {
     cell.addEventListener("click", (e) => {
       e.preventDefault();
-      if (!selectedTempatId) {
-        alert("Pilih tempat dulu");
-        return;
-      }
       const idMahasiswa = parseInt(cell.parentNode.dataset.mahasiswaId);
       const tanggal = cell.dataset.date;
       if (cell.classList.contains("scheduled")) {
-        submitForm("hapus", idMahasiswa, null, tanggal, tanggal);
+        if (confirmDelete()) {
+          submitForm("hapus", idMahasiswa, null, tanggal, tanggal);
+        }
         return;
+      }
+      if (!selectedTempatId) {
+        restoreTempatSelection();
+        if (!selectedTempatId) {
+          alert("Pilih tempat dulu");
+          return;
+        }
       }
       if (!startDate) {
         selectedMahasiswaId = idMahasiswa;
@@ -190,7 +323,7 @@ function handleCellSelection() {
         const url = new URL(window.location);
         url.searchParams.set("start_date", startDate);
         url.searchParams.set("mahasiswa_id", selectedMahasiswaId);
-        window.history.pushState({}, "", url);
+        window.history.replaceState({}, "", url);
         updateHiddenFields();
         updateRangePreview(tanggal, tanggal);
       } else {
@@ -204,7 +337,7 @@ function handleCellSelection() {
           const url = new URL(window.location);
           url.searchParams.delete("start_date");
           url.searchParams.delete("mahasiswa_id");
-          window.history.pushState({}, "", url);
+          window.history.replaceState({}, "", url);
           updateHiddenFields();
           return;
         }
@@ -219,7 +352,7 @@ function handleCellSelection() {
           const url = new URL(window.location);
           url.searchParams.delete("start_date");
           url.searchParams.delete("mahasiswa_id");
-          window.history.pushState({}, "", url);
+          window.history.replaceState({}, "", url);
           updateHiddenFields();
           return;
         }
@@ -230,7 +363,7 @@ function handleCellSelection() {
         const url = new URL(window.location);
         url.searchParams.delete("start_date");
         url.searchParams.delete("mahasiswa_id");
-        window.history.pushState({}, "", url);
+        window.history.replaceState({}, "", url);
         updateHiddenFields();
         startDate = null;
         selectedMahasiswaId = null;
@@ -279,11 +412,13 @@ function showScheduleInfo(cell, event) {
   const mulai = cell.dataset.mulai;
   const selesai = cell.dataset.selesai;
   const namaDosen = cell.dataset.dosen || "Tidak ada";
+  const namaPreceptor1 = cell.dataset.preceptor1 || "Tidak ada";
+  const namaPreceptor2 = cell.dataset.preceptor2 || "Tidak ada";
   const tooltip = document.createElement("div");
   tooltip.id = "schedule-tooltip";
   tooltip.style.cssText =
     "position:absolute;background:#333;color:#fff;padding:8px;border-radius:4px;z-index:1000;font-size:14px;max-width:300px;box-shadow:0 2px 5px rgba(0,0,0,0.2);";
-  tooltip.innerHTML = `<strong>Tempat:</strong> ${namaTempat}<br><strong>Jenis:</strong> ${jenis}<br><strong>Rentang:</strong> ${mulai} hingga ${selesai}<br><strong>Dosen:</strong> ${namaDosen}`;
+  tooltip.innerHTML = `<strong>Tempat:</strong> ${namaTempat}<br><strong>Jenis:</strong> ${jenis}<br><strong>Rentang:</strong> ${mulai} hingga ${selesai}<br><strong>Dosen:</strong> ${namaDosen}<br><strong>Preceptor 1:</strong> ${namaPreceptor1}<br><strong>Preceptor 2:</strong> ${namaPreceptor2}`;
   document.body.appendChild(tooltip);
   tooltip.style.left = `${event.clientX + 10}px`;
   tooltip.style.top = `${event.clientY + 10}px`;
@@ -330,18 +465,28 @@ function submitForm(
   if (idTempat) formData.append("id_tempat", idTempat);
   if (action === "tambah") {
     const idDosen = document.getElementById("dosen_pembimbing")?.value;
+    const idPreceptor1 = document.getElementById("preceptor1")?.value;
+    const idPreceptor2 = document.getElementById("preceptor2")?.value;
     if (idDosen && !isNaN(parseInt(idDosen)))
       formData.append("id_dosen_pembimbing", idDosen);
+    if (idPreceptor1 && !isNaN(parseInt(idPreceptor1)))
+      formData.append("id_preceptor1", idPreceptor1);
+    if (idPreceptor2 && !isNaN(parseInt(idPreceptor2)))
+      formData.append("id_preceptor2", idPreceptor2);
     formData.append("tanggal_mulai_0", tanggalMulai);
     formData.append("tanggal_selesai_0", tanggalSelesai);
   } else if (action === "hapus") formData.append("tanggal", tanggalMulai);
+  const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+  if (csrfToken) formData.append("csrf_token", csrfToken);
   fetch("tambah_jadwal.php", { method: "POST", body: formData })
     .then((response) =>
-      response.text().then((text) => ({
-        status: response.status,
-        data: text ? JSON.parse(text) : null,
-        rawText: text,
-      }))
+      response
+        .text()
+        .then((text) => ({
+          status: response.status,
+          data: text ? JSON.parse(text) : null,
+          rawText: text,
+        }))
     )
     .then(({ status, data }) => {
       if (status >= 200 && status < 300) {
@@ -356,22 +501,34 @@ function submitForm(
             .map((c) => `${c.tanggal_mulai} hingga ${c.tanggal_selesai}`)
             .join(", ")}`;
         alert("Error: " + errorMsg);
+        if (action === "tambah") {
+          clearSelection();
+          startDate = null;
+          selectedMahasiswaId = null;
+          localStorage.removeItem("startDate");
+          localStorage.removeItem("selectedMahasiswaId");
+          const url = new URL(window.location);
+          url.searchParams.delete("start_date");
+          url.searchParams.delete("mahasiswa_id");
+          window.history.replaceState({}, "", url);
+          updateHiddenFields();
+        }
+      }
+    })
+    .catch((error) => {
+      alert("Terjadi kesalahan: " + error.message);
+      if (action === "tambah") {
         clearSelection();
         startDate = null;
         selectedMahasiswaId = null;
         localStorage.removeItem("startDate");
         localStorage.removeItem("selectedMahasiswaId");
+        const url = new URL(window.location);
+        url.searchParams.delete("start_date");
+        url.searchParams.delete("mahasiswa_id");
+        window.history.replaceState({}, "", url);
         updateHiddenFields();
       }
-    })
-    .catch((error) => {
-      alert("Terjadi kesalahan: " + error.message);
-      clearSelection();
-      startDate = null;
-      selectedMahasiswaId = null;
-      localStorage.removeItem("startDate");
-      localStorage.removeItem("selectedMahasiswaId");
-      updateHiddenFields();
     });
 }
 
@@ -417,7 +574,7 @@ function setupZoom() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Reset selectedTempatId untuk jadwal.php agar dropdown tempat default ke "Semua Tempat"
+  console.log("DOMContentLoaded triggered");
   if (window.location.pathname.includes("jadwal.php")) {
     localStorage.removeItem("selectedTempatId");
     localStorage.removeItem("selectedNamaTempat");
@@ -430,48 +587,35 @@ document.addEventListener("DOMContentLoaded", () => {
   const urlParams = new URLSearchParams(window.location.search);
   const savedStartDate = urlParams.get("start_date");
   const savedMahasiswaId = urlParams.get("mahasiswa_id");
-  const savedTempatId =
-    urlParams.get("id_tempat") || localStorage.getItem("selectedTempatId");
   const savedDosenId = urlParams.get("id_dosen_pembimbing");
+  const savedPreceptor1Id = urlParams.get("id_preceptor1");
+  const savedPreceptor2Id = urlParams.get("id_preceptor2");
 
-  // Restore dosen
   if (savedDosenId) {
-    document.getElementById("dosen_pembimbing").value = savedDosenId;
-    localStorage.setItem("selectedDosenId", savedDosenId);
-  }
-
-  // Restore tempat hanya jika di halaman selain jadwal.php
-  if (!window.location.pathname.includes("jadwal.php") && savedTempatId) {
-    const select = document.querySelector(
-      `select option[value="${savedTempatId}"]`
-    )?.parentNode;
-    if (select) {
-      select.value = savedTempatId;
-      selectedTempatId = parseInt(savedTempatId);
-      selectedNamaTempat =
-        select.selectedOptions[0]?.dataset.nama ||
-        localStorage.getItem("selectedNamaTempat") ||
-        "";
-      const jenis =
-        select.dataset.jenis || localStorage.getItem("selectedJenisTempat");
-      const index =
-        Array.from(select.options)
-          .filter((opt) => opt.value !== "")
-          .indexOf(select.selectedOptions[0]) %
-          placeColors[jenis]?.variations.length || 0;
-      selectedColor = placeColors[jenis]?.variations[index] || "#ccc";
-      document.querySelectorAll(".dropdown-item select").forEach((sel) => {
-        if (sel !== select && sel.id !== "dosen_pembimbing") sel.value = "";
-        const jenisSel = sel.dataset.jenis;
-        sel.className = jenisSel ? `dropdown-${jenisSel}` : "default-dropdown";
-      });
-      localStorage.setItem("selectedTempatId", selectedTempatId);
-      localStorage.setItem("selectedNamaTempat", selectedNamaTempat);
-      localStorage.setItem("selectedJenisTempat", jenis);
+    const dosenSelect = document.getElementById("dosen_pembimbing");
+    if (dosenSelect) {
+      dosenSelect.value = savedDosenId;
+      localStorage.setItem("selectedDosenId", savedDosenId);
     }
   }
 
-  // Restore startDate dan mahasiswaId
+  if (savedPreceptor1Id) {
+    const preceptor1Select = document.getElementById("preceptor1");
+    if (preceptor1Select) {
+      preceptor1Select.value = savedPreceptor1Id;
+      localStorage.setItem("selectedPreceptor1Id", savedPreceptor1Id);
+    }
+  }
+  if (savedPreceptor2Id) {
+    const preceptor2Select = document.getElementById("preceptor2");
+    if (preceptor2Select) {
+      preceptor2Select.value = savedPreceptor2Id;
+      localStorage.setItem("selectedPreceptor2Id", savedPreceptor2Id);
+    }
+  }
+
+  restoreTempatSelection();
+
   if (
     savedStartDate &&
     savedMahasiswaId &&
@@ -481,6 +625,52 @@ document.addEventListener("DOMContentLoaded", () => {
     selectedMahasiswaId = parseInt(savedMahasiswaId);
     localStorage.setItem("startDate", startDate);
     localStorage.setItem("selectedMahasiswaId", selectedMahasiswaId);
+    if (selectedTempatId) {
+      updateRangePreview(startDate, startDate);
+    }
+  }
+
+  const filterForm = document.getElementById("filterForm");
+  if (filterForm) {
+    filterForm.addEventListener("submit", (e) => {
+      if (selectedTempatId) {
+        const hiddenTempat = document.getElementById("hidden_id_tempat");
+        if (hiddenTempat) hiddenTempat.value = selectedTempatId;
+        const url = new URL(window.location);
+        url.searchParams.set("id_tempat", selectedTempatId);
+        window.history.replaceState({}, "", url);
+      }
+      const dosenSelect = document.getElementById("dosen_pembimbing");
+      if (dosenSelect && dosenSelect.value) {
+        const hiddenDosen = document.getElementById(
+          "hidden_id_dosen_pembimbing"
+        );
+        if (hiddenDosen) hiddenDosen.value = dosenSelect.value;
+        const url = new URL(window.location);
+        url.searchParams.set("id_dosen_pembimbing", dosenSelect.value);
+        window.history.replaceState({}, "", url);
+      }
+      const preceptor1Select = document.getElementById("preceptor1");
+      if (preceptor1Select && preceptor1Select.value) {
+        const hiddenPreceptor1 = document.getElementById(
+          "hidden_id_preceptor1"
+        );
+        if (hiddenPreceptor1) hiddenPreceptor1.value = preceptor1Select.value;
+        const url = new URL(window.location);
+        url.searchParams.set("id_preceptor1", preceptor1Select.value);
+        window.history.replaceState({}, "", url);
+      }
+      const preceptor2Select = document.getElementById("preceptor2");
+      if (preceptor2Select && preceptor2Select.value) {
+        const hiddenPreceptor2 = document.getElementById(
+          "hidden_id_preceptor2"
+        );
+        if (hiddenPreceptor2) hiddenPreceptor2.value = preceptor2Select.value;
+        const url = new URL(window.location);
+        url.searchParams.set("id_preceptor2", preceptor2Select.value);
+        window.history.replaceState({}, "", url);
+      }
+    });
   }
 
   updateHiddenFields();

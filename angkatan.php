@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $stmt->execute([$angkatan, $semester, $bulan_mulai, $bulan_selesai, $tahun_mulai, $tahun_selesai]);
                 } else {
                     $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-                    $stmt = $pdo->prepare("UPDATE semester_angkatan SET angkatan=?, semester=?, bulan_mulai=?, bulan_selesai?, tahun_mulai=?, tahun_selesai=? WHERE id=?");
+                    $stmt = $pdo->prepare("UPDATE semester_angkatan SET angkatan=?, semester=?, bulan_mulai=?, bulan_selesai=?, tahun_mulai=?, tahun_selesai=? WHERE id=?");
                     $stmt->execute([$angkatan, $semester, $bulan_mulai, $bulan_selesai, $tahun_mulai, $tahun_selesai, $id]);
                 }
                 header('Location: angkatan.php');
@@ -87,17 +87,10 @@ if (isset($_GET['edit'])) {
 </head>
 
 <body>
-    <header>
-        <a href="beranda.php">Dashboard</a>
-        <a href="mahasiswa1.php">Mahasiswa</a>
-        <a href="tempat.php">Tempat</a>
-        <a href="jadwal.php">Jadwal</a>
-        <a href="tambah_jadwal.php">Tambah Jadwal</a>
-        <a href="logout.php" class="logout-btn">Logout</a>
-    </header>
+    <?php include 'header.php'; ?>
     <h1>Manajemen Angkatan</h1>
 
-    <a href="mahasiswa1.php" class="action-btn edit-btn">Kembali</a>
+    <a href="mahasiswa.php" class="action-btn edit-btn">Kembali</a>
 
     <h2><?php echo $edit ? 'Edit Angkatan' : 'Tambah Angkatan'; ?></h2>
     <form method="POST" class="mahasiswa-form">
@@ -105,35 +98,37 @@ if (isset($_GET['edit'])) {
         <?php if ($edit): ?>
             <input type="hidden" name="id" value="<?php echo htmlspecialchars($edit['id']); ?>">
         <?php endif; ?>
-        <div class="form-group">
-            <label for="angkatan">Angkatan:</label>
-            <input type="number" name="angkatan" id="angkatan" value="<?php echo $edit ? htmlspecialchars($edit['angkatan']) : ''; ?>" required aria-label="Angkatan">
+        <div class="form-group-container">
+            <div class="form-group">
+                <label for="angkatan">Angkatan:</label>
+                <input type="number" name="angkatan" id="angkatan" value="<?php echo $edit ? htmlspecialchars($edit['angkatan']) : ''; ?>" required aria-label="Angkatan">
+            </div>
+            <div class="form-group">
+                <label for="semester">Semester:</label>
+                <select name="semester" id="semester" required aria-label="Semester">
+                    <option value="">Pilih Semester</option>
+                    <option value="ganjil" <?php echo ($edit && $edit['semester'] == 'ganjil') ? 'selected' : ''; ?>>Ganjil</option>
+                    <option value="genap" <?php echo ($edit && $edit['semester'] == 'genap') ? 'selected' : ''; ?>>Genap</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="bulan_mulai">Bulan Mulai:</label>
+                <input type="number" name="bulan_mulai" id="bulan_mulai" min="1" max="12" value="<?php echo $edit ? htmlspecialchars($edit['bulan_mulai']) : ''; ?>" required aria-label="Bulan Mulai">
+            </div>
+            <div class="form-group">
+                <label for="bulan_selesai">Bulan Selesai:</label>
+                <input type="number" name="bulan_selesai" id="bulan_selesai" min="1" max="12" value="<?php echo $edit ? htmlspecialchars($edit['bulan_selesai']) : ''; ?>" required aria-label="Bulan Selesai">
+            </div>
+            <div class="form-group">
+                <label for="tahun_mulai">Tahun Mulai:</label>
+                <input type="number" name="tahun_mulai" id="tahun_mulai" value="<?php echo $edit ? htmlspecialchars($edit['tahun_mulai']) : ''; ?>" required aria-label="Tahun Mulai">
+            </div>
+            <div class="form-group">
+                <label for="tahun_selesai">Tahun Selesai:</label>
+                <input type="number" name="tahun_selesai" id="tahun_selesai" value="<?php echo $edit ? htmlspecialchars($edit['tahun_selesai']) : ''; ?>" required aria-label="Tahun Selesai">
+            </div>
         </div>
-        <div class="form-group">
-            <label for="semester">Semester:</label>
-            <select name="semester" id="semester" required aria-label="Semester">
-                <option value="">Pilih Semester</option>
-                <option value="ganjil" <?php echo ($edit && $edit['semester'] == 'ganjil') ? 'selected' : ''; ?>>Ganjil</option>
-                <option value="genap" <?php echo ($edit && $edit['semester'] == 'genap') ? 'selected' : ''; ?>>Genap</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="bulan_mulai">Bulan Mulai:</label>
-            <input type="number" name="bulan_mulai" id="bulan_mulai" min="1" max="12" value="<?php echo $edit ? htmlspecialchars($edit['bulan_mulai']) : ''; ?>" required aria-label="Bulan Mulai">
-        </div>
-        <div class="form-group">
-            <label for="bulan_selesai">Bulan Selesai:</label>
-            <input type="number" name="bulan_selesai" id="bulan_selesai" min="1" max="12" value="<?php echo $edit ? htmlspecialchars($edit['bulan_selesai']) : ''; ?>" required aria-label="Bulan Selesai">
-        </div>
-        <div class="form-group">
-            <label for="tahun_mulai">Tahun Mulai:</label>
-            <input type="number" name="tahun_mulai" id="tahun_mulai" value="<?php echo $edit ? htmlspecialchars($edit['tahun_mulai']) : ''; ?>" required aria-label="Tahun Mulai">
-        </div>
-        <div class="form-group">
-            <label for="tahun_selesai">Tahun Selesai:</label>
-            <input type="number" name="tahun_selesai" id="tahun_selesai" value="<?php echo $edit ? htmlspecialchars($edit['tahun_selesai']) : ''; ?>" required aria-label="Tahun Selesai">
-        </div>
-        <button type="submit">Simpan</button>
+        <button type="submit"><?php echo $edit ? 'Update' : 'Simpan'; ?></button>
     </form>
 
     <h2>Filter Angkatan</h2>
@@ -156,36 +151,41 @@ if (isset($_GET['edit'])) {
     <?php if (empty($semester_angkatan_list)): ?>
         <p>Tidak ada data angkatan yang sesuai dengan filter.</p>
     <?php else: ?>
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Angkatan</th>
-                <th>Semester</th>
-                <th>Bulan Mulai</th>
-                <th>Bulan Selesai</th>
-                <th>Tahun Mulai</th>
-                <th>Tahun Selesai</th>
-                <th>Aksi</th>
-            </tr>
-            <?php foreach ($semester_angkatan_list as $row): ?>
+        <table class="mahasiswa-table">
+            <thead>
                 <tr>
-                    <td><?php echo htmlspecialchars($row['id']); ?></td>
-                    <td><?php echo htmlspecialchars($row['angkatan']); ?></td>
-                    <td><?php echo htmlspecialchars($row['semester']); ?></td>
-                    <td><?php echo htmlspecialchars($row['bulan_mulai']); ?></td>
-                    <td><?php echo htmlspecialchars($row['bulan_selesai']); ?></td>
-                    <td><?php echo htmlspecialchars($row['tahun_mulai']); ?></td>
-                    <td><?php echo htmlspecialchars($row['tahun_selesai']); ?></td>
-                    <td>
-                        <a href="angkatan.php?edit=<?php echo htmlspecialchars($row['id']); ?>" class="action-btn edit-btn">Edit</a> |
-                        <form method="POST" style="display:inline;" class="delete-form">
-                            <input type="hidden" name="action" value="hapus">
-                            <input type="hidden" name="id" value="<?php echo htmlspecialchars($row['id']); ?>">
-                            <button type="submit" class="action-btn delete-btn" onclick="return confirmDelete();">Hapus</button>
-                        </form>
-                    </td>
+                    <th>No</th>
+                    <th>Angkatan</th>
+                    <th>Semester</th>
+                    <th>Bulan Mulai</th>
+                    <th>Bulan Selesai</th>
+                    <th>Tahun Mulai</th>
+                    <th>Tahun Selesai</th>
+                    <th>Aksi</th>
                 </tr>
-            <?php endforeach; ?>
+            </thead>
+            <tbody>
+                <?php $no = 1; ?>
+                <?php foreach ($semester_angkatan_list as $row): ?>
+                    <tr>
+                        <td><?php echo $no++; ?></td>
+                        <td><?php echo htmlspecialchars($row['angkatan']); ?></td>
+                        <td><?php echo htmlspecialchars($row['semester']); ?></td>
+                        <td><?php echo htmlspecialchars($row['bulan_mulai']); ?></td>
+                        <td><?php echo htmlspecialchars($row['bulan_selesai']); ?></td>
+                        <td><?php echo htmlspecialchars($row['tahun_mulai']); ?></td>
+                        <td><?php echo htmlspecialchars($row['tahun_selesai']); ?></td>
+                        <td>
+                            <a href="angkatan.php?edit=<?php echo htmlspecialchars($row['id']); ?>" class="action-btn edit-btn">Edit</a>
+                            <form method="POST" class="delete-form">
+                                <input type="hidden" name="action" value="hapus">
+                                <input type="hidden" name="id" value="<?php echo htmlspecialchars($row['id']); ?>">
+                                <button type="submit" class="action-btn delete-btn" onclick="return confirmDelete();">Hapus</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
         </table>
     <?php endif; ?>
 </body>

@@ -51,12 +51,17 @@ if ($selected_semester) {
     $where_clauses[] = $month_range;
 }
 
-// Query untuk daftar jadwal
-$sql = "SELECT m.nama AS mahasiswa, t.nama_tempat AS tempat, t.jenis_tempat, d.nama AS dosen_pembimbing, j.tanggal_mulai, j.tanggal_selesai 
+// Query untuk daftar jadwal (diperbarui untuk preceptor)
+$sql = "SELECT m.nama AS mahasiswa, t.nama_tempat AS tempat, t.jenis_tempat, 
+        dp.nama AS dosen_pembimbing, 
+        CONCAT(COALESCE(p1.nama, ''), IF(COALESCE(p2.nama, '') != '', CONCAT(', ', p2.nama), '')) AS preceptor, 
+        j.tanggal_mulai, j.tanggal_selesai 
         FROM jadwal j 
         JOIN mahasiswa m ON j.id_mahasiswa = m.id 
         JOIN tempat t ON j.id_tempat = t.id 
-        LEFT JOIN dosen_pembimbing d ON j.id_dosen_pembimbing = d.id";
+        LEFT JOIN dosen_pembimbing dp ON j.id_dosen_pembimbing = dp.id AND dp.tipe = 'dosen'
+        LEFT JOIN dosen_pembimbing p1 ON j.id_preceptor1 = p1.id AND p1.tipe = 'preceptor'
+        LEFT JOIN dosen_pembimbing p2 ON j.id_preceptor2 = p2.id AND p2.tipe = 'preceptor'";
 if (!empty($where_clauses)) {
     $sql .= " WHERE " . implode(" AND ", $where_clauses);
 }
@@ -75,8 +80,8 @@ $output = fopen('php://output', 'w');
 // Add UTF-8 BOM for proper encoding in Excel
 fputs($output, "\xEF\xBB\xBF");
 
-// Write headers
-fputcsv($output, ['No', 'Mahasiswa', 'Tempat', 'Jenis Tempat', 'Dosen Pembimbing', 'Tanggal Mulai', 'Tanggal Selesai'], ';');
+// Write headers (diperbarui untuk preceptor)
+fputcsv($output, ['No', 'Mahasiswa', 'Tempat', 'Jenis Tempat', 'Dosen Pembimbing', 'Preceptor', 'Tanggal Mulai', 'Tanggal Selesai'], ';');
 
 // Write data rows
 $no = 1;
@@ -87,6 +92,7 @@ foreach ($jadwal_list as $row) {
         $row['tempat'] ?? '',
         $row['jenis_tempat'] ?? '',
         $row['dosen_pembimbing'] ?? 'Tidak ada',
+        $row['preceptor'] ? trim($row['preceptor'], ', ') : 'Tidak ada',
         $row['tanggal_mulai'] ?? '',
         $row['tanggal_selesai'] ?? ''
     ], ';');

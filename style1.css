@@ -115,17 +115,18 @@ form {
     margin-bottom: 15px;
 }
 
-.filter-form {
+.filter-form, .mahasiswa-form, .pembimbing-form {
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
     align-items: flex-end;
 }
 
-.mahasiswa-form {
+.form-group-container {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
 }
 
 .form-group {
@@ -185,7 +186,7 @@ button:disabled {
     cursor: not-allowed;
 }
 
-/* Action buttons for mahasiswa.php */
+/* Action buttons */
 .action-btn {
     padding: 6px 12px;
     border-radius: 4px;
@@ -251,7 +252,7 @@ button:disabled {
     border-radius: 4px;
     border: 1px solid #d1d5db;
     color: #1f2a44;
-    background-color: #f9fafb; /* Default background */
+    background-color: #f9fafb;
     transition: background-color 0.2s, border-color 0.2s;
 }
 
@@ -342,7 +343,7 @@ button:disabled {
 .zoom-wrapper {
     transform-origin: top left;
     transition: transform 0.2s ease;
-    width: 1500px; /* Base width, adjusted in JS */
+    width: 1500px;
 }
 
 /* Tables */
@@ -438,7 +439,12 @@ tr:hover {
         font-size: 1.1rem;
     }
 
-    .filter-form {
+    .filter-form, .mahasiswa-form, .pembimbing-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .form-group-container {
         flex-direction: column;
         align-items: stretch;
     }
@@ -464,7 +470,7 @@ tr:hover {
         font-size: 0.8rem;
     }
 
-    .mahasiswa-form {
+    .mahasiswa-form, .pembimbing-form {
         gap: 8px;
     }
 
@@ -491,3 +497,17 @@ a:focus, button:focus, input:focus, select:focus {
     outline: 2px solid #3b82f6;
     outline-offset: 1px;
 }
+/* Tambahan untuk teks nama tempat di sel */
+.jadwalTable td.scheduled {
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #ffffff;
+  text-align: center;
+  padding: 4px;
+  min-width: 80px;
+  max-width: 80px;
+}
+

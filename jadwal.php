@@ -6,6 +6,16 @@ function sanitize($data)
     return htmlspecialchars(strip_tags(trim($data)));
 }
 
+// Handle get_preceptors for AJAX
+if (isset($_GET['get_preceptors']) && filter_var($_GET['id_tempat'], FILTER_VALIDATE_INT)) {
+    header('Content-Type: application/json');
+    $stmt = $pdo->prepare("SELECT id, nama FROM dosen_pembimbing WHERE tipe = 'preceptor' AND id_tempat = ? ORDER BY nama");
+    $stmt->execute([$_GET['id_tempat']]);
+    $preceptor_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    echo json_encode($preceptor_list);
+    exit;
+}
+
 // Handle tambah/edit/hapus
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['action'])) {
@@ -13,6 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $id_mahasiswa = filter_input(INPUT_POST, 'id_mahasiswa', FILTER_VALIDATE_INT);
             $id_tempat = filter_input(INPUT_POST, 'id_tempat', FILTER_VALIDATE_INT);
             $id_dosen_pembimbing = filter_input(INPUT_POST, 'id_dosen_pembimbing', FILTER_VALIDATE_INT) ?: null;
+            $id_preceptor1 = filter_input(INPUT_POST, 'id_preceptor1', FILTER_VALIDATE_INT) ?: null;
+            $id_preceptor2 = filter_input(INPUT_POST, 'id_preceptor2', FILTER_VALIDATE_INT) ?: null;
             $tanggal_mulai = sanitize($_POST['tanggal_mulai']);
             $tanggal_selesai = sanitize($_POST['tanggal_selesai']);
             if (!$id_mahasiswa || !$id_tempat || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_mulai) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_selesai)) {
@@ -20,13 +32,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             } elseif ($tanggal_mulai > $tanggal_selesai) {
                 echo "<script>alert('Tanggal mulai harus sebelum atau sama dengan tanggal selesai');</script>";
             } else {
-                if ($_POST['action'] == 'tambah') {
-                    $stmt = $pdo->prepare("INSERT INTO jadwal (id_mahasiswa, id_tempat, id_dosen_pembimbing, tanggal_mulai, tanggal_selesai) VALUES (?, ?, ?, ?, ?)");
-                    $stmt->execute([$id_mahasiswa, $id_tempat, $id_dosen_pembimbing, $tanggal_mulai, $tanggal_selesai]);
-                } else {
+                if ($_POST['action'] == 'edit') {
                     $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-                    $stmt = $pdo->prepare("UPDATE jadwal SET id_mahasiswa=?, id_tempat=?, id_dosen_pembimbing=?, tanggal_mulai=?, tanggal_selesai=? WHERE id=?");
-                    $stmt->execute([$id_mahasiswa, $id_tempat, $id_dosen_pembimbing, $tanggal_mulai, $tanggal_selesai, $id]);
+                    $stmt = $pdo->prepare("SELECT * FROM jadwal WHERE id_mahasiswa = ? AND id != ? AND (
+                        (tanggal_mulai <= ? AND tanggal_selesai >= ?) OR
+                        (tanggal_mulai <= ? AND tanggal_selesai >= ?) OR
+                        (tanggal_mulai >= ? AND tanggal_selesai <= ?)
+                    )");
+                    $stmt->execute([$id_mahasiswa, $id, $tanggal_selesai, $tanggal_mulai, $tanggal_mulai, $tanggal_selesai, $tanggal_mulai, $tanggal_selesai]);
+                    if ($stmt->fetch()) {
+                        echo "<script>alert('Konflik jadwal terdeteksi: Jadwal tumpang tindih untuk mahasiswa ini');</script>";
+                    } else {
+                        $stmt = $pdo->prepare("UPDATE jadwal SET id_mahasiswa=?, id_tempat=?, id_dosen_pembimbing=?, id_preceptor1=?, id_preceptor2=?, tanggal_mulai=?, tanggal_selesai=? WHERE id=?");
+                        $stmt->execute([$id_mahasiswa, $id_tempat, $id_dosen_pembimbing, $id_preceptor1, $id_preceptor2, $tanggal_mulai, $tanggal_selesai, $id]);
+                        echo "<script>alert('Jadwal berhasil diperbarui'); window.location.href='jadwal.php';</script>";
+                        exit;
+                    }
+                } else {
+                    $stmt = $pdo->prepare("INSERT INTO jadwal (id_mahasiswa, id_tempat, id_dosen_pembimbing, id_preceptor1, id_preceptor2, tanggal_mulai, tanggal_selesai) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$id_mahasiswa, $id_tempat, $id_dosen_pembimbing, $id_preceptor1, $id_preceptor2, $tanggal_mulai, $tanggal_selesai]);
                 }
                 header('Location: jadwal.php');
                 exit;
@@ -48,7 +72,10 @@ $stmt = $pdo->query("SELECT DISTINCT jenis_tempat FROM tempat ORDER BY jenis_tem
 $jenis_tempat_list = $stmt->fetchAll(PDO::FETCH_COLUMN);
 $stmt = $pdo->query("SELECT id, nama_tempat FROM tempat ORDER BY nama_tempat");
 $tempat_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
-$stmt = $pdo->query("SELECT id, nama FROM dosen_pembimbing ORDER BY nama");
+$stmt = $pdo->query("SELECT d.id, d.nama, d.tipe, t.nama_tempat 
+                     FROM dosen_pembimbing d 
+                     LEFT JOIN tempat t ON d.id_tempat = t.id 
+                     ORDER BY d.nama");
 $dosen_pembimbing_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Ambil rentang tanggal unik dari tabel jadwal
@@ -105,11 +132,16 @@ if ($selected_semester) {
 }
 
 // Query untuk daftar jadwal
-$sql = "SELECT j.id, m.nama AS mahasiswa, t.nama_tempat AS tempat, t.jenis_tempat, d.nama AS dosen_pembimbing, j.tanggal_mulai, j.tanggal_selesai 
+$sql = "SELECT j.id, m.nama AS mahasiswa, t.nama_tempat AS tempat, t.jenis_tempat, 
+        dp.nama AS dosen_pembimbing, 
+        CONCAT(COALESCE(p1.nama, ''), IF(COALESCE(p2.nama, '') != '', CONCAT(', ', p2.nama), '')) AS preceptor, 
+        j.tanggal_mulai, j.tanggal_selesai 
         FROM jadwal j 
         JOIN mahasiswa m ON j.id_mahasiswa = m.id 
         JOIN tempat t ON j.id_tempat = t.id 
-        LEFT JOIN dosen_pembimbing d ON j.id_dosen_pembimbing = d.id";
+        LEFT JOIN dosen_pembimbing dp ON j.id_dosen_pembimbing = dp.id AND dp.tipe = 'dosen'
+        LEFT JOIN dosen_pembimbing p1 ON j.id_preceptor1 = p1.id AND p1.tipe = 'preceptor'
+        LEFT JOIN dosen_pembimbing p2 ON j.id_preceptor2 = p2.id AND p2.tipe = 'preceptor'";
 if (!empty($where_clauses)) {
     $sql .= " WHERE " . implode(" AND ", $where_clauses);
 }
@@ -120,10 +152,16 @@ $jadwal_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Ambil data untuk edit
 $edit = null;
+$preceptor_list_edit = [];
 if (isset($_GET['edit'])) {
     $stmt = $pdo->prepare("SELECT * FROM jadwal WHERE id=?");
     $stmt->execute([$_GET['edit']]);
     $edit = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($edit) {
+        $stmt = $pdo->prepare("SELECT id, nama FROM dosen_pembimbing WHERE tipe = 'preceptor' AND id_tempat = ? ORDER BY nama");
+        $stmt->execute([$edit['id_tempat']]);
+        $preceptor_list_edit = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 ?>
 
@@ -135,17 +173,76 @@ if (isset($_GET['edit'])) {
     <title>Jadwal</title>
     <link rel="stylesheet" href="style1.css">
     <script src="script1.js"></script>
+    <script>
+        function validateEditForm() {
+            const form = document.querySelector('.mahasiswa-form');
+            if (!form) return;
+
+            form.addEventListener('submit', (e) => {
+                const tanggalMulai = form.querySelector('#tanggal_mulai').value;
+                const tanggalSelesai = form.querySelector('#tanggal_selesai').value;
+                const idMahasiswa = form.querySelector('#id_mahasiswa').value;
+                const idTempat = form.querySelector('#id_tempat').value;
+
+                if (!idMahasiswa || isNaN(idMahasiswa)) {
+                    alert('Pilih mahasiswa terlebih dahulu');
+                    e.preventDefault();
+                    return;
+                }
+                if (!idTempat || isNaN(idTempat)) {
+                    alert('Pilih tempat terlebih dahulu');
+                    e.preventDefault();
+                    return;
+                }
+                if (!tanggalMulai || !tanggalSelesai) {
+                    alert('Tanggal mulai dan selesai harus diisi');
+                    e.preventDefault();
+                    return;
+                }
+                if (tanggalMulai > tanggalSelesai) {
+                    alert('Tanggal mulai tidak boleh setelah tanggal selesai');
+                    e.preventDefault();
+                    return;
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            validateEditForm();
+            const tempatSelect = document.getElementById('id_tempat');
+            if (tempatSelect) {
+                tempatSelect.addEventListener('change', () => {
+                    const idTempat = tempatSelect.value;
+                    if (idTempat) {
+                        fetch(`jadwal.php?id_tempat=${idTempat}&get_preceptors=1`)
+                            .then(response => response.json())
+                            .then(data => {
+                                const preceptor1 = document.getElementById('id_preceptor1');
+                                const preceptor2 = document.getElementById('id_preceptor2');
+                                preceptor1.innerHTML = '<option value="">Tidak ada</option>';
+                                preceptor2.innerHTML = '<option value="">Tidak ada</option>';
+                                data.forEach(p => {
+                                    const opt1 = document.createElement('option');
+                                    opt1.value = p.id;
+                                    opt1.textContent = p.nama;
+                                    preceptor1.appendChild(opt1);
+                                    const opt2 = opt1.cloneNode(true);
+                                    preceptor2.appendChild(opt2);
+                                });
+                            })
+                            .catch(error => {
+                                console.error('Error fetching preceptors:', error);
+                                alert('Gagal memuat preceptor.');
+                            });
+                    }
+                });
+            }
+        });
+    </script>
 </head>
 
 <body>
-    <header>
-        <a href="beranda.php">Dashboard</a>
-        <a href="mahasiswa1.php">Mahasiswa</a>
-        <a href="tempat.php">Tempat</a>
-        <a href="jadwal.php">Jadwal</a>
-        <a href="tambah_jadwal.php">Tambah Jadwal</a>
-        <a href="logout.php" class="logout-btn">Logout</a>
-    </header>
+    <?php include 'header.php'; ?>
     <h1>Manajemen Jadwal</h1>
 
     <h2>Filter Jadwal</h2>
@@ -214,6 +311,7 @@ if (isset($_GET['edit'])) {
                 <th>Tempat</th>
                 <th>Jenis Tempat</th>
                 <th>Dosen Pembimbing</th>
+                <th>Preceptor</th>
                 <th>Mulai</th>
                 <th>Selesai</th>
                 <th>Aksi</th>
@@ -228,6 +326,7 @@ if (isset($_GET['edit'])) {
                     <td><?php echo htmlspecialchars($row['tempat']); ?></td>
                     <td><?php echo htmlspecialchars($row['jenis_tempat']); ?></td>
                     <td><?php echo htmlspecialchars($row['dosen_pembimbing'] ?? 'Tidak ada'); ?></td>
+                    <td><?php echo htmlspecialchars($row['preceptor'] ? trim($row['preceptor'], ', ') : 'Tidak ada'); ?></td>
                     <td><?php echo htmlspecialchars($row['tanggal_mulai']); ?></td>
                     <td><?php echo htmlspecialchars($row['tanggal_selesai']); ?></td>
                     <td>
@@ -277,9 +376,33 @@ if (isset($_GET['edit'])) {
                 <select name="id_dosen_pembimbing" id="id_dosen_pembimbing">
                     <option value="">Tidak ada</option>
                     <?php
-                    $stmt = $pdo->query("SELECT id, nama FROM dosen_pembimbing");
-                    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    foreach ($dosen_pembimbing_list as $row) {
+                        if ($row['tipe'] != 'dosen') continue;
                         $selected = ($edit['id_dosen_pembimbing'] == $row['id']) ? 'selected' : '';
+                        echo "<option value='{$row['id']}' $selected>" . htmlspecialchars($row['nama']) . "</option>";
+                    }
+                    ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="id_preceptor1">Preceptor 1:</label>
+                <select name="id_preceptor1" id="id_preceptor1">
+                    <option value="">Tidak ada</option>
+                    <?php
+                    foreach ($preceptor_list_edit as $row) {
+                        $selected = ($edit['id_preceptor1'] == $row['id']) ? 'selected' : '';
+                        echo "<option value='{$row['id']}' $selected>" . htmlspecialchars($row['nama']) . "</option>";
+                    }
+                    ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="id_preceptor2">Preceptor 2:</label>
+                <select name="id_preceptor2" id="id_preceptor2">
+                    <option value="">Tidak ada</option>
+                    <?php
+                    foreach ($preceptor_list_edit as $row) {
+                        $selected = ($edit['id_preceptor2'] == $row['id']) ? 'selected' : '';
                         echo "<option value='{$row['id']}' $selected>" . htmlspecialchars($row['nama']) . "</option>";
                     }
                     ?>
@@ -294,6 +417,7 @@ if (isset($_GET['edit'])) {
                 <input type="date" name="tanggal_selesai" id="tanggal_selesai" value="<?php echo htmlspecialchars($edit['tanggal_selesai']); ?>" required>
             </div>
             <button type="submit">Simpan Perubahan</button>
+            <button type="button" onclick="window.location.href='jadwal.php'">Batal</button>
         </form>
     <?php endif; ?>
 
@@ -302,6 +426,10 @@ if (isset($_GET['edit'])) {
             const url = new URL(window.location.href);
             url.pathname = url.pathname.replace('jadwal.php', 'export_jadwal.php');
             window.location.href = url.toString();
+        }
+
+        function confirmDelete() {
+            return confirm("Apakah Anda yakin ingin menghapus jadwal ini?");
         }
     </script>
 </body>

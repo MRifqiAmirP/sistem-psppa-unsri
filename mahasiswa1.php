@@ -77,14 +77,7 @@ if (isset($_GET['edit'])) {
 </head>
 
 <body>
-    <header>
-        <a href="beranda.php">Dashboard</a>
-        <a href="mahasiswa1.php">Mahasiswa</a>
-        <a href="tempat.php">Tempat</a>
-        <a href="jadwal.php">Jadwal</a>
-        <a href="tambah_jadwal.php">Tambah Jadwal</a>
-        <a href="logout.php" class="logout-btn">Logout</a>
-    </header>
+    <?php include 'header.php'; ?>
     <h1>Manajemen Mahasiswa</h1>
 
     <a href="angkatan.php" class="action-btn edit-btn">Kelola Angkatan</a>
@@ -95,22 +88,24 @@ if (isset($_GET['edit'])) {
         <?php if ($edit): ?>
             <input type="hidden" name="id" value="<?php echo htmlspecialchars($edit['id']); ?>">
         <?php endif; ?>
-        <div class="form-group">
-            <label for="nama">Nama:</label>
-            <input type="text" name="nama" id="nama" value="<?php echo $edit ? htmlspecialchars($edit['nama']) : ''; ?>" required aria-label="Nama Mahasiswa">
-        </div>
-        <div class="form-group">
-            <label for="nim">NIM:</label>
-            <input type="text" name="nim" id="nim" value="<?php echo $edit ? htmlspecialchars($edit['nim']) : ''; ?>" required aria-label="NIM Mahasiswa">
-        </div>
-        <div class="form-group">
-            <label for="angkatan-form">Angkatan:</label>
-            <select name="angkatan" id="angkatan-form" required aria-label="Angkatan Mahasiswa">
-                <option value="">Pilih Angkatan</option>
-                <?php foreach ($angkatan_list as $angk): ?>
-                    <option value="<?php echo htmlspecialchars($angk); ?>" <?php echo ($edit && $edit['angkatan'] == $angk) ? 'selected' : ''; ?>><?php echo htmlspecialchars($angk); ?></option>
-                <?php endforeach; ?>
-            </select>
+        <div class="form-group-container">
+            <div class="form-group">
+                <label for="nama">Nama:</label>
+                <input type="text" name="nama" id="nama" value="<?php echo $edit ? htmlspecialchars($edit['nama']) : ''; ?>" required aria-label="Nama Mahasiswa">
+            </div>
+            <div class="form-group">
+                <label for="nim">NIM:</label>
+                <input type="text" name="nim" id="nim" value="<?php echo $edit ? htmlspecialchars($edit['nim']) : ''; ?>" required aria-label="NIM Mahasiswa">
+            </div>
+            <div class="form-group">
+                <label for="angkatan-form">Angkatan:</label>
+                <select name="angkatan" id="angkatan-form" required aria-label="Angkatan Mahasiswa">
+                    <option value="">Pilih Angkatan</option>
+                    <?php foreach ($angkatan_list as $angk): ?>
+                        <option value="<?php echo htmlspecialchars($angk); ?>" <?php echo ($edit && $edit['angkatan'] == $angk) ? 'selected' : ''; ?>><?php echo htmlspecialchars($angk); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </div>
         <button type="submit"><?php echo $edit ? 'Update' : 'Simpan'; ?></button>
     </form>
@@ -138,7 +133,7 @@ if (isset($_GET['edit'])) {
         <table class="mahasiswa-table">
             <thead>
                 <tr>
-                    <th>ID</th>
+                    <th>No</th>
                     <th>Nama</th>
                     <th>NIM</th>
                     <th>Angkatan</th>
@@ -146,9 +141,10 @@ if (isset($_GET['edit'])) {
                 </tr>
             </thead>
             <tbody>
+                <?php $no = 1; ?>
                 <?php foreach ($mahasiswa_list as $row): ?>
                     <tr>
-                        <td><?php echo htmlspecialchars($row['id']); ?></td>
+                        <td><?php echo $no++; ?></td>
                         <td><?php echo htmlspecialchars($row['nama']); ?></td>
                         <td><?php echo htmlspecialchars($row['nim']); ?></td>
                         <td><?php echo htmlspecialchars($row['angkatan']); ?></td>
