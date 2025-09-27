@@ -1,5 +1,5 @@
 <?php
-include 'db.php';
+include 'config.php';
 session_start();
 
 function sanitize($data)
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 exit;
             }
             if ($id_dosen_pembimbing) {
-                $stmt = $pdo->prepare("SELECT id FROM dosen_pembimbing WHERE id = ? AND tipe = 'dosen'");
+                $stmt = $conn->prepare("SELECT id FROM dosen_pembimbing WHERE id = ? AND tipe = 'dosen'");
                 $stmt->execute([$id_dosen_pembimbing]);
                 if (!$stmt->fetch()) {
                     http_response_code(400);
@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 }
             }
             if ($id_preceptor1) {
-                $stmt = $pdo->prepare("SELECT id FROM dosen_pembimbing WHERE id = ? AND tipe = 'preceptor' AND id_tempat = ?");
+                $stmt = $conn->prepare("SELECT id FROM dosen_pembimbing WHERE id = ? AND tipe = 'preceptor' AND id_tempat = ?");
                 $stmt->execute([$id_preceptor1, $id_tempat]);
                 if (!$stmt->fetch()) {
                     http_response_code(400);
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 }
             }
             if ($id_preceptor2) {
-                $stmt = $pdo->prepare("SELECT id FROM dosen_pembimbing WHERE id = ? AND tipe = 'preceptor' AND id_tempat = ?");
+                $stmt = $conn->prepare("SELECT id FROM dosen_pembimbing WHERE id = ? AND tipe = 'preceptor' AND id_tempat = ?");
                 $stmt->execute([$id_preceptor2, $id_tempat]);
                 if (!$stmt->fetch()) {
                     http_response_code(400);
@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 exit;
             }
             foreach ($ranges as $range) {
-                $stmt = $pdo->prepare("INSERT INTO jadwal (id_mahasiswa, id_tempat, id_dosen_pembimbing, id_preceptor1, id_preceptor2, tanggal_mulai, tanggal_selesai) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $conn->prepare("INSERT INTO jadwal (id_mahasiswa, id_tempat, id_dosen_pembimbing, id_preceptor1, id_preceptor2, tanggal_mulai, tanggal_selesai) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$id_mahasiswa, $id_tempat, $id_dosen_pembimbing, $id_preceptor1, $id_preceptor2, $range['tanggal_mulai'], $range['tanggal_selesai']]);
             }
             echo json_encode(['success' => true]);
@@ -148,10 +148,10 @@ if (isset($_GET['month']) && preg_match('/^(\d{2})-(\d{4})$/', $_GET['month'], $
     $selected_year = $matches[2];
 }
 
-$stmt = $pdo->query("SELECT DISTINCT angkatan FROM mahasiswa ORDER BY angkatan DESC");
+$stmt = $conn->query("SELECT DISTINCT angkatan FROM mahasiswa ORDER BY angkatan DESC");
 $angkatan_list = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-$stmt = $pdo->query("SELECT DISTINCT jenis_tempat FROM tempat ORDER BY jenis_tempat");
+$stmt = $conn->query("SELECT DISTINCT jenis_tempat FROM tempat ORDER BY jenis_tempat");
 $jenis_tempat_list = $stmt->fetchAll(PDO::FETCH_COLUMN);
 $tempat_by_jenis = [];
 foreach ($jenis_tempat_list as $jenis) {
@@ -161,12 +161,12 @@ foreach ($jenis_tempat_list as $jenis) {
     error_log("Tempat Query Result for jenis $jenis: " . print_r($tempat_by_jenis[$jenis], true));
 }
 
-$stmt = $pdo->query("SELECT id, nama FROM dosen_pembimbing WHERE tipe = 'dosen' ORDER BY nama");
+$stmt = $conn->query("SELECT id, nama FROM dosen_pembimbing WHERE tipe = 'dosen' ORDER BY nama");
 $dosen_pembimbing_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $preceptor_list = [];
 if (isset($_GET['id_tempat']) && filter_var($_GET['id_tempat'], FILTER_VALIDATE_INT)) {
-    $stmt = $pdo->prepare("SELECT id, nama FROM dosen_pembimbing WHERE tipe = 'preceptor' AND id_tempat = ? ORDER BY nama");
+    $stmt = $conn->prepare("SELECT id, nama FROM dosen_pembimbing WHERE tipe = 'preceptor' AND id_tempat = ? ORDER BY nama");
     $stmt->execute([$_GET['id_tempat']]);
     $preceptor_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
     error_log("Preceptor Query Result for id_tempat {$_GET['id_tempat']}: " . print_r($preceptor_list, true));
@@ -177,11 +177,11 @@ if (isset($_GET['id_tempat']) && filter_var($_GET['id_tempat'], FILTER_VALIDATE_
     error_log("No id_tempat provided for preceptor query");
 }
 
-$stmt = $pdo->prepare("SELECT id, nama FROM mahasiswa WHERE angkatan = ? ORDER BY nama");
+$stmt = $conn->prepare("SELECT id, nama FROM mahasiswa WHERE angkatan = ? ORDER BY nama");
 $stmt->execute([$selected_angkatan]);
 $mahasiswa_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt = $pdo->prepare("SELECT j.*, m.nama AS nama_mahasiswa, t.nama_tempat, t.jenis_tempat, d.nama AS nama_dosen, p1.nama AS nama_preceptor1, p2.nama AS nama_preceptor2 FROM jadwal j JOIN mahasiswa m ON j.id_mahasiswa = m.id JOIN tempat t ON j.id_tempat = t.id LEFT JOIN dosen_pembimbing d ON j.id_dosen_pembimbing = d.id LEFT JOIN dosen_pembimbing p1 ON j.id_preceptor1 = p1.id LEFT JOIN dosen_pembimbing p2 ON j.id_preceptor2 = p2.id WHERE m.angkatan = ? ORDER BY m.nama, j.tanggal_mulai");
+$stmt = $conn->prepare("SELECT j.*, m.nama AS nama_mahasiswa, t.nama_tempat, t.jenis_tempat, d.nama AS nama_dosen, p1.nama AS nama_preceptor1, p2.nama AS nama_preceptor2 FROM jadwal j JOIN mahasiswa m ON j.id_mahasiswa = m.id JOIN tempat t ON j.id_tempat = t.id LEFT JOIN dosen_pembimbing d ON j.id_dosen_pembimbing = d.id LEFT JOIN dosen_pembimbing p1 ON j.id_preceptor1 = p1.id LEFT JOIN dosen_pembimbing p2 ON j.id_preceptor2 = p2.id WHERE m.angkatan = ? ORDER BY m.nama, j.tanggal_mulai");
 $stmt->execute([$selected_angkatan]);
 $jadwal_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -263,7 +263,7 @@ usort($month_tables, function ($a, $b) {
 
 if (isset($_GET['get_preceptors']) && filter_var($_GET['id_tempat'], FILTER_VALIDATE_INT)) {
     header('Content-Type: application/json');
-    $stmt = $pdo->prepare("SELECT id, nama FROM dosen_pembimbing WHERE tipe = 'preceptor' AND id_tempat = ? ORDER BY nama");
+    $stmt = $conn->prepare("SELECT id, nama FROM dosen_pembimbing WHERE tipe = 'preceptor' AND id_tempat = ? ORDER BY nama");
     $stmt->execute([$_GET['id_tempat']]);
     $preceptor_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
     echo json_encode($preceptor_list);

@@ -1,5 +1,5 @@
 <?php
-include 'db.php';
+include 'config.php';
 
 function sanitize($data)
 {
@@ -21,12 +21,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             } else {
                 try {
                     if ($_POST['action'] == 'tambah') {
-                        $stmt = $pdo->prepare("INSERT INTO dosen_pembimbing (nama, tipe, id_tempat) VALUES (?, ?, ?)");
+                        $stmt = $conn->prepare("INSERT INTO dosen_pembimbing (nama, tipe, id_tempat) VALUES (?, ?, ?)");
                         $stmt->execute([$nama, $tipe, $id_tempat]);
                         echo "<script>alert('Pembimbing berhasil ditambahkan');</script>";
                     } else {
                         $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-                        $stmt = $pdo->prepare("UPDATE dosen_pembimbing SET nama=?, tipe=?, id_tempat=? WHERE id=?");
+                        $stmt = $conn->prepare("UPDATE dosen_pembimbing SET nama=?, tipe=?, id_tempat=? WHERE id=?");
                         $stmt->execute([$nama, $tipe, $id_tempat, $id]);
                         echo "<script>alert('Pembimbing berhasil diperbarui');</script>";
                     }
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         } elseif ($_POST['action'] == 'hapus') {
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
             try {
-                $stmt = $pdo->prepare("DELETE FROM dosen_pembimbing WHERE id=?");
+                $stmt = $conn->prepare("DELETE FROM dosen_pembimbing WHERE id=?");
                 $stmt->execute([$id]);
                 echo "<script>alert('Pembimbing berhasil dihapus');</script>";
                 header('Location: tambah_pembimbing.php');
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 // Ambil data pembimbing
 try {
-    $stmt = $pdo->query("SELECT d.id, d.nama, d.tipe, t.nama_tempat 
+    $stmt = $conn->query("SELECT d.id, d.nama, d.tipe, t.nama_tempat 
                          FROM dosen_pembimbing d 
                          LEFT JOIN tempat t ON d.id_tempat = t.id 
                          ORDER BY d.nama");
@@ -65,7 +65,7 @@ try {
 
 // Ambil data tempat untuk dropdown
 try {
-    $stmt = $pdo->query("SELECT id, nama_tempat FROM tempat ORDER BY nama_tempat");
+    $stmt = $conn->query("SELECT id, nama_tempat FROM tempat ORDER BY nama_tempat");
     $tempat_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     echo "<script>alert('Error mengambil data tempat: " . addslashes($e->getMessage()) . "');</script>";
@@ -76,7 +76,7 @@ try {
 $edit = null;
 if (isset($_GET['edit'])) {
     try {
-        $stmt = $pdo->prepare("SELECT * FROM dosen_pembimbing WHERE id=?");
+        $stmt = $conn->prepare("SELECT * FROM dosen_pembimbing WHERE id=?");
         $stmt->execute([$_GET['edit']]);
         $edit = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
